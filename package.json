@@ -8,7 +8,8 @@
   "start": "next start",
   "lint": "eslint",
   "typecheck": "tsc --noEmit",
-  "backfill:customers": "node --env-file=.env node_modules/ts-node/dist/bin.js --project tsconfig.scripts.json scripts/backfill-customers.ts"
+  "backfill:customers": "node --env-file=.env node_modules/ts-node/dist/bin.js --project tsconfig.scripts.json scripts/backfill-customers.ts",
+  "notes:convert": "node --env-file=.env node_modules/ts-node/dist/bin.js --project tsconfig.scripts.json scripts/convert-appointments-to-notes.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",

@@ -147,7 +147,7 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
   const { program, stamps, stampGranted, redemption, blocker } = state;
 
   return (
-    <div className="bg-salon-yellow/10 border-2 border-salon-yellow/50 rounded-2xl px-4 py-3">
+    <div className="bg-salon-honey/10 border-2 border-salon-honey/50 rounded-2xl px-4 py-3">
       <div className="flex items-center justify-between gap-3 mb-2">
         <p className="text-[10px] font-black text-salon-brown uppercase tracking-widest">
           Recompensas
@@ -202,7 +202,7 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
                   className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 ${
                     stampGranted
                       ? "bg-white text-salon-gray border-2 border-salon-gray/25 hover:border-salon-terracotta hover:text-salon-terracotta"
-                      : "bg-salon-brown text-salon-yellow hover:bg-salon-brown/90"
+                      : "bg-salon-brown text-salon-honey hover:bg-salon-brown/90"
                   }`}
                 >
                   {stampGranted ? "Quitar el sello de esta cita" : "Dar sello por esta cita"}
@@ -241,7 +241,7 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
               <p className="text-[10px] font-black text-salon-gray uppercase tracking-widest mb-1.5">
                 Código para activar su tarjeta
               </p>
-              <p className="text-center text-3xl font-black text-salon-brown tracking-[0.16em] tabular-nums bg-salon-yellow/30 rounded-xl py-3">
+              <p className="text-center text-3xl font-black text-salon-brown tracking-[0.16em] tabular-nums bg-salon-honey/30 rounded-xl py-3">
                 {issued.code}
               </p>
               <p className="text-[10px] text-salon-gray text-center mt-1.5 leading-relaxed">

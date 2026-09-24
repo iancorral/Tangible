@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { addMinutes, isBefore } from "date-fns";
 import { z } from "zod";
 import { chihuahuaToUTC, minutesToLabel, CHIHUAHUA_UTC_OFFSET } from "@/lib/timezone";
-import { resolveDayWindow, BUFFER_AFTER_APPOINTMENT } from "@/lib/availability";
+import { resolveDayWindow, getPublicBusyIntervals, overlapsAny } from "@/lib/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -47,16 +46,7 @@ export async function GET(req: Request) {
       chihuahuaNow.getUTCMonth() === month - 1 &&
       chihuahuaNow.getUTCDate() === day;
 
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        status: "CONFIRMED",
-        ...(excludeId ? { id: { not: excludeId } } : {}),
-        OR: [
-          { date: { gte: dayStart, lt: dayEnd } },
-          { endDate: { gt: dayStart, lte: dayEnd } },
-        ],
-      },
-    });
+    const busy = await getPublicBusyIntervals(dayStart, dayEnd, excludeId);
     const slots: string[] = [];
     let currentMinutes = startMinutes;
 
@@ -72,13 +62,7 @@ export async function GET(req: Request) {
         }
       }
 
-      const hasCollision = appointments.some((app) => {
-        const appStart = new Date(app.date);
-        const appEndWithBuffer = addMinutes(new Date(app.endDate), BUFFER_AFTER_APPOINTMENT);
-        return slotStart.getTime() < appEndWithBuffer.getTime() && slotEnd.getTime() > appStart.getTime();
-      });
-
-      if (!hasCollision) {
+      if (!overlapsAny(slotStart, slotEnd, busy)) {
         slots.push(minutesToLabel(currentMinutes));
       }
 

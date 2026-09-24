@@ -378,7 +378,7 @@ export default function CustomerDetailPage() {
             <button
               type="submit"
               disabled={saving || merging}
-              className="px-6 py-3 bg-salon-brown text-salon-yellow rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:hover:scale-100"
+              className="px-6 py-3 bg-salon-brown text-salon-honey rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:hover:scale-100"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>
