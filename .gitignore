@@ -48,3 +48,5 @@ tangiblefixes.patch
 .gitignore
 
 .claude
+# respaldos de scripts de migración (contienen datos de clientas)
+/scripts/.backups/

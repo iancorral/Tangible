@@ -187,9 +187,9 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Six shortcuts: two rows of three on a phone stay tappable, where a
-              single row of six would not. */}
-          <div className="grid grid-cols-3 gap-2 w-full md:flex md:w-auto md:gap-3">
+          {/* Seven shortcuts: on a phone, two rows of four (Total Citas spans
+              two cells) stay tappable, where a single row would not. */}
+          <div className="grid grid-cols-4 gap-2 w-full md:flex md:w-auto md:gap-3">
             <a href="/admin/calendar" className="flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-lavender/30 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
               <span className="text-[10px] uppercase text-salon-gray font-bold tracking-wider mb-1">Agenda</span>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -219,11 +219,20 @@ export default function AdminDashboard() {
                 <rect x="18" y="18" width="3" height="3"/>
               </svg>
             </a>
-            <Link href="/admin/rewards" className="flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-yellow/60 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
+            <Link href="/admin/rewards" className="flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-honey/50 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
               <span className="text-[10px] uppercase text-salon-gray font-bold tracking-wider mb-1">Premios</span>
               <svg className="w-6 h-6 text-salon-terracotta" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <circle cx="12" cy="8" r="6"/>
                 <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+              </svg>
+            </Link>
+            <Link href="/admin/notes" className="flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-pink/40 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
+              <span className="text-[10px] uppercase text-salon-gray font-bold tracking-wider mb-1">Notas</span>
+              <svg className="w-6 h-6 text-salon-pink" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/>
+                <path d="M15 3v6h6"/>
+                <path d="M7 13h6"/>
+                <path d="M7 17h10"/>
               </svg>
             </Link>
             <a href="/admin/schedule" className="flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-terracotta/30 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
@@ -233,7 +242,7 @@ export default function AdminDashboard() {
                 <polyline points="12 6 12 12 16 14"/>
               </svg>
             </a>
-            <button onClick={() => window.location.reload()} className="group flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-olive/30 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
+            <button onClick={() => window.location.reload()} className="group col-span-2 md:col-span-1 flex flex-col items-center justify-center min-w-0 bg-white px-2 py-3 md:px-6 border-2 border-salon-olive/30 rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all">
               <span className="text-[10px] uppercase text-salon-gray font-bold tracking-wider mb-1 text-center leading-tight">Total Citas</span>
               <span className="text-2xl md:text-3xl font-black text-salon-olive group-hover:text-salon-terracotta transition-colors">
                 {appointments.length}

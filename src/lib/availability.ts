@@ -58,6 +58,56 @@ export async function resolveDayWindow(
 
 export type SlotCheck = { ok: true } | { ok: false; reason: string };
 
+type BusyInterval = { start: number; end: number };
+
+/**
+ * Everything that makes a moment unavailable to the public on a Chihuahua day,
+ * as [start, end) epoch-millisecond ranges: confirmed appointments (plus the
+ * cleanup buffer) and notes the owner marked as blocking her schedule. The
+ * public grid and the booking write path both read from here, so the two can
+ * never disagree about what is free.
+ */
+export async function getPublicBusyIntervals(
+  dayStart: Date,
+  dayEnd: Date,
+  excludeAppointmentId?: string
+): Promise<BusyInterval[]> {
+  const [appointments, notes] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        status: "CONFIRMED",
+        ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
+        OR: [
+          { date: { gte: dayStart, lt: dayEnd } },
+          { endDate: { gt: dayStart, lte: dayEnd } },
+        ],
+      },
+      select: { date: true, endDate: true },
+    }),
+    prisma.note.findMany({
+      where: { blocksSchedule: true, startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
+      select: { startAt: true, endAt: true },
+    }),
+  ]);
+
+  const intervals: BusyInterval[] = appointments.map((app) => ({
+    start: app.date.getTime(),
+    end: addMinutes(app.endDate, BUFFER_AFTER_APPOINTMENT).getTime(),
+  }));
+  for (const note of notes) {
+    if (note.startAt && note.endAt) {
+      intervals.push({ start: note.startAt.getTime(), end: note.endAt.getTime() });
+    }
+  }
+  return intervals;
+}
+
+export function overlapsAny(start: Date, end: Date, intervals: BusyInterval[]): boolean {
+  const s = start.getTime();
+  const e = end.getTime();
+  return intervals.some((i) => s < i.end && e > i.start);
+}
+
 /**
  * Authoritative server-side check that a slot can actually be booked.
  * Mirrors the rules used to render the public availability grid so that the
@@ -90,23 +140,8 @@ export async function isSlotBookable(
   const dayEnd = chihuahuaToUTC(year, month, day + 1, 0, 0);
   const end = addMinutes(start, durationMinutes);
 
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      status: "CONFIRMED",
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-      OR: [
-        { date: { gte: dayStart, lt: dayEnd } },
-        { endDate: { gt: dayStart, lte: dayEnd } },
-      ],
-    },
-  });
-
-  const collision = appointments.some((app) => {
-    const appStart = new Date(app.date);
-    const appEndWithBuffer = addMinutes(new Date(app.endDate), BUFFER_AFTER_APPOINTMENT);
-    return start.getTime() < appEndWithBuffer.getTime() && end.getTime() > appStart.getTime();
-  });
-  if (collision) return { ok: false, reason: "Ese horario ya no está disponible" };
+  const busy = await getPublicBusyIntervals(dayStart, dayEnd, excludeId);
+  if (overlapsAny(start, end, busy)) return { ok: false, reason: "Ese horario ya no está disponible" };
 
   return { ok: true };
 }

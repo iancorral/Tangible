@@ -248,3 +248,42 @@ model AvailabilityOverride {
   note      String?
   createdAt DateTime @default(now())
 }
+// Notas personales del panel: pendientes, compras, "tianguis", "fisio"...
+//
+// Antes se capturaban como citas gratis sin teléfono, lo que inflaba el conteo
+// de citas y las métricas con cosas que no eran clientas. Una nota puede llevar
+// fecha (aparece en el calendario) y, opcionalmente, apartar ese horario para
+// que la web pública no ofrezca esos espacios. Solo la reserva pública lo
+// respeta: desde el panel la dueña siempre puede agendar encima.
+model Note {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  title          String     @default("")
+  body           String     @default("")
+  // Checklist embebida: siempre se lee y escribe junto con la nota.
+  items          NoteItem[]
+  // Clave de NOTE_COLORS en lib/notes.ts, nunca una clase CSS cruda.
+  color          String     @default("CREAM")
+  pinned         Boolean    @default(false)
+  archived       Boolean    @default(false)
+
+  // Fecha opcional. Con allDay, startAt es la medianoche de Chihuahua de ese
+  // día y endAt la del día siguiente; así el choque de horarios es un solo
+  // cálculo de intervalos para ambos casos.
+  startAt        DateTime?
+  endAt          DateTime?
+  allDay         Boolean    @default(false)
+  blocksSchedule Boolean    @default(false)
+
+  createdBy      String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([archived, pinned, updatedAt])
+  @@index([startAt])
+}
+
+type NoteItem {
+  id   String
+  text String
+  done Boolean @default(false)
+}
