@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import AppointmentRewards from "./AppointmentRewards";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type PaymentStatus = "PENDING" | "PARTIAL" | "PAID";
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER";
@@ -53,6 +54,7 @@ export default function PaymentModal({
   onClose,
   onUpdated,
 }: Props) {
+  useBodyScrollLock();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(currentPaymentStatus);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">(
     (currentPaymentMethod as PaymentMethod) ?? ""

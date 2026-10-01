@@ -49,8 +49,10 @@ function CalendarContent() {
   const [notes,       setNotes]       = useState<NoteDTO[]>([]);
   const [noteEditor,  setNoteEditor]  = useState<NoteDTO | "new" | null>(null);
 
-  // Deep-link desde el panel: /admin/calendar?date=2026-06-15
+  // Deep-link desde el panel: /admin/calendar?date=2026-06-15 y ?new=1
+  // (botón "Nueva cita" del inicio).
   useEffect(() => {
+    if (searchParams.get("new") === "1") setShowCreateModal(true);
     const p = searchParams.get("date");
     if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) {
       const [y, m, d] = p.split("-").map(Number);
@@ -200,19 +202,13 @@ function CalendarContent() {
   };
 
   return (
-    <main className="min-h-screen bg-salon-bg relative">
+    <main className="min-h-[100dvh] bg-salon-bg relative">
       <MuralDecorations />
 
       <div className="max-w-5xl mx-auto p-4 md:p-8 relative z-10">
         {/* HEADER */}
         <header className="flex items-center justify-between mb-6">
           <div>
-            <a
-              href="/admin"
-              className="text-[10px] text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-2 block"
-            >
-              ← Panel
-            </a>
             <h1 className="font-title text-2xl font-black text-salon-brown uppercase tracking-[0.15em]">
               Calendario
             </h1>
@@ -353,8 +349,8 @@ function CalendarContent() {
             </div>
           </div>
 
-          {/* AGENDA DEL DÍA */}
-          <div className="lg:col-span-1">
+          {/* AGENDA DEL DÍA — fija al hacer scroll en escritorio */}
+          <div className="lg:col-span-1 lg:sticky lg:top-6 lg:self-start">
             <div className="bg-white rounded-3xl border-2 border-salon-olive/20 shadow-sm overflow-hidden">
               <div className={`p-4 ${isSelectedPast ? "bg-salon-gray/40" : "bg-salon-brown"}`}>
                 <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">
@@ -434,6 +430,12 @@ function CalendarContent() {
           onClose={() => {
             setShowCreateModal(false);
             setQuickTime(undefined);
+            // Que recargar la página no vuelva a abrir el modal de ?new=1.
+            if (searchParams.get("new")) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("new");
+              window.history.replaceState(null, "", url);
+            }
           }}
           onCreated={() => {
             // Solo refrescamos; el modal muestra el paso de confirmación y se
@@ -504,7 +506,7 @@ function CalendarContent() {
 
 export default function CalendarPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-salon-bg" />}>
+    <Suspense fallback={<div className="min-h-[100dvh] bg-salon-bg" />}>
       <CalendarContent />
     </Suspense>
   );

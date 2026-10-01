@@ -52,17 +52,11 @@ export default function CustomersPage() {
   );
 
   return (
-    <main className="min-h-screen p-6 md:p-10 relative bg-salon-bg">
+    <main className="min-h-[100dvh] px-4 pt-6 pb-8 sm:px-6 lg:px-10 lg:pt-10 relative bg-salon-bg">
       <MuralDecorations />
 
-      <div className="max-w-3xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto relative z-10">
         <header className="mb-8">
-          <Link
-            href="/admin"
-            className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block"
-          >
-            ← Volver al panel
-          </Link>
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
             Clientas
           </h1>
@@ -74,7 +68,7 @@ export default function CustomersPage() {
           </div>
         </header>
 
-        <div className="mb-5">
+        <div className="mb-5 lg:max-w-md">
           <label htmlFor="customer-search" className="sr-only">
             Buscar clienta por nombre o teléfono
           </label>
@@ -90,8 +84,8 @@ export default function CustomersPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {[...Array(6)].map((_, i) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl border-2 border-salon-olive/10 h-[76px] animate-pulse"
@@ -105,7 +99,7 @@ export default function CustomersPage() {
             </p>
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="grid gap-3 lg:grid-cols-2">
             {customers.map((customer) => {
               const lastVisit = customer.lastVisit ? new Date(customer.lastVisit) : null;
               return (

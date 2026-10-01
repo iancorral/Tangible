@@ -181,17 +181,11 @@ export default function RewardsPage() {
   const ready = customers.filter((c) => c.ready);
 
   return (
-    <main className="min-h-screen p-6 md:p-10 relative bg-salon-bg">
+    <main className="min-h-[100dvh] p-6 md:p-10 relative bg-salon-bg">
       <MuralDecorations />
 
       <div className="max-w-3xl mx-auto relative z-10">
         <header className="mb-8">
-          <Link
-            href="/admin"
-            className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block"
-          >
-            ← Volver al panel
-          </Link>
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
             Recompensas
           </h1>

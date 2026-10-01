@@ -7,6 +7,7 @@ import MuralDecorations from '@/components/layout/MuralDecorations';
 import { CategoryAccordion } from '@/components/bookings/ServiceCard';
 import BookingCalendar from '@/components/bookings/BookingCalendar';
 import ClientForm from '@/components/bookings/ClientForm';
+import BookingSummary from '@/components/bookings/BookingSummary';
 import { buildClientBookingRequestMessage, buildWhatsAppUrl } from '@/lib/whatsapp';
 import { chihuahuaToUTC } from '@/lib/timezone';
 
@@ -101,13 +102,13 @@ export default function Home() {
     const whatsappUrl = buildWhatsAppUrl(salonPhone, message);
 
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+      <main className="min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
   
         <MuralDecorations />
       
         <div className="z-10 bg-white/90 backdrop-blur-sm p-8 rounded-2xl border-2 border-salon-black shadow-folk max-w-sm animate-in fade-in zoom-in">
       
-            <div className="w-20 h-20 bg-salon-yellow rounded-full flex items-center justify-center mb-4 mx-auto border-2 border-salon-black">
+            <div className="w-20 h-20 bg-salon-honey rounded-full flex items-center justify-center mb-4 mx-auto border-2 border-salon-black">
               <svg className="w-10 h-10 text-salon-black" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
@@ -138,138 +139,183 @@ export default function Home() {
     );
   }
 
-  return (
-    <main className="min-h-screen p-6 md:p-8 max-w-md mx-auto relative">
-  
-        <MuralDecorations />
+  const step = !selectedServices.length ? 1 : !bookingDate ? 2 : 3;
 
-        <header className="mb-8 text-center mt-6 fade-in flex flex-col items-center relative z-10">
-          <div className="w-36 h-36 relative mb-2 filter drop-shadow-sm hover:rotate-2 transition-transform duration-500">
-            <Image 
-              src="/logo-tangible.png" 
-              alt="Tangible Logo"
-              fill
-              className="object-contain"
-              priority
+  const continueToForm = () => {
+    setShowClientForm(true);
+    setTimeout(() => document.getElementById('tus-datos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
+
+  return (
+    <main className="relative min-h-[100dvh]">
+      <MuralDecorations />
+
+      <div className="relative z-10 mx-auto max-w-6xl px-5 pt-8 pb-10 sm:px-8 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14 lg:px-10 lg:pt-16">
+        {/* ── Marca + resumen (columna izquierda en escritorio) ─────────── */}
+        <aside className="lg:sticky lg:top-12 lg:self-start">
+          <header className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <div className="relative mb-2 h-32 w-32 drop-shadow-sm lg:h-40 lg:w-40 lg:-ml-3">
+              <Image src="/logo-tangible.png" alt="Tangible" fill sizes="160px" className="object-contain" priority />
+            </div>
+            <h1 className="font-title text-3xl font-black uppercase tracking-[0.3em] text-salon-brown lg:text-5xl lg:tracking-[0.25em]">
+              Tangible
+            </h1>
+            <div className="mt-2 flex items-center gap-3 opacity-80">
+              <span className="h-[2px] w-6 rounded-full bg-salon-terracotta lg:hidden" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-salon-terracotta lg:text-xs">Nails &amp; Art Studio</p>
+              <span className="h-[2px] w-6 rounded-full bg-salon-terracotta" />
+            </div>
+            <p className="mt-6 hidden max-w-sm text-[15px] leading-relaxed text-salon-brown/80 lg:block">
+              Uñas, maquillaje y arte hechos a mano. Elige tus servicios, aparta tu espacio y
+              confirma por WhatsApp.
+            </p>
+            <ul className="mt-5 hidden flex-wrap gap-2 lg:flex">
+              {['Reserva en 3 pasos', 'Confirmación por WhatsApp', 'Depósito de $150'].map((t) => (
+                <li key={t} className="rounded-full border border-salon-brown/10 bg-white/70 px-3 py-1.5 text-[11px] font-bold text-salon-brown/80">
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </header>
+
+          <div className="mt-8 hidden lg:block">
+            <BookingSummary
+              services={selectedServices}
+              bookingDate={bookingDate}
+              onRemove={toggleService}
+              onContinue={continueToForm}
+              continueDisabled={!bookingDate}
+              formOpen={showClientForm}
             />
           </div>
-          
-          <h1 className="font-title text-3xl font-black text-salon-brown tracking-[0.3em] uppercase mb-2">
-            TANGIBLE
-          </h1>
-      
-          <div className="flex items-center gap-3 opacity-70">
-            <div className="h-[2px] w-6 bg-salon-terracotta rounded-full"></div>
-            <p className="text-salon-terracotta text-[10px] uppercase tracking-[0.2em] font-bold">
-              Nails & Art Studio
-            </p>
-            <div className="h-[2px] w-6 bg-salon-terracotta rounded-full"></div>
-          </div>
-        </header>
+        </aside>
 
-        <section className={`relative z-10 ${showClientForm ? 'opacity-50 pointer-events-none' : ''}`}>
-          <div className="flex justify-between items-center mb-4 px-2">
-            <h2 className="text-xs font-black text-salon-olive uppercase tracking-[0.1em] bg-white/80 px-3 py-2 rounded-xl backdrop-blur-sm border border-salon-olive/20">
+        {/* ── Pasos de la reserva ───────────────────────────────────────── */}
+        <div className="mt-8 lg:mt-0">
+          <ol className="mb-6 flex items-center gap-2" aria-label="Pasos">
+            {['Servicios', 'Fecha', 'Tus datos'].map((label, i) => {
+              const n = i + 1;
+              const done = n < step;
+              const current = n === step;
+              return (
+                <li key={label} className="flex flex-1 items-center gap-2" aria-current={current ? 'step' : undefined}>
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black transition-colors ${
+                      done ? 'bg-salon-olive text-white' : current ? 'bg-salon-brown text-white' : 'bg-white text-salon-gray border border-salon-gray/30'
+                    }`}
+                  >
+                    {done ? '✓' : n}
+                  </span>
+                  <span className={`truncate text-[11px] font-black uppercase tracking-wider ${current ? 'text-salon-brown' : 'text-salon-gray'}`}>
+                    {label}
+                  </span>
+                  {n < 3 && <span className="hidden h-px flex-1 bg-salon-brown/10 sm:block" />}
+                </li>
+              );
+            })}
+          </ol>
+
+          <section className={`${showClientForm ? 'opacity-50 pointer-events-none' : ''}`} aria-labelledby="paso-servicios">
+            <h2 id="paso-servicios" className="mb-3 px-1 text-xs font-black uppercase tracking-[0.15em] text-salon-olive">
               1. Elige tu arte
             </h2>
-            {selectedServices.length > 0 && (
-              <span className="text-xs font-black text-white bg-salon-lavender px-3 py-1 rounded-full shadow-sm animate-pulse border-2 border-white">
-                {selectedServices.length}
-              </span>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-[60px] rounded-2xl border-2 border-salon-gray/10 bg-white animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {Array.from(new Set(services.map(s => s.category ?? 'General'))).map(category => (
+                  <CategoryAccordion
+                    key={category}
+                    category={category}
+                    services={services.filter(s => (s.category ?? 'General') === category)}
+                    selectedServices={selectedServices}
+                    onSelect={toggleService}
+                  />
+                ))}
+              </div>
             )}
-          </div>
-
-          {loading ? (
-            <div className="text-center py-10 animate-pulse text-salon-gray font-medium">Cargando menú...</div>
-          ) : (
-            <div className="space-y-3">
-              {Array.from(new Set(services.map(s => s.category ?? 'General'))).map(category => (
-                <CategoryAccordion
-                  key={category}
-                  category={category}
-                  services={services.filter(s => (s.category ?? 'General') === category)}
-                  selectedServices={selectedServices}
-                  onSelect={toggleService}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {selectedServices.length > 0 && (
-          <section className={`mt-10 relative z-10 ${showClientForm ? 'opacity-50 pointer-events-none' : 'animate-in fade-in'}`}>
-            <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border-2 border-salon-olive/30 shadow-folk">
-                <h2 className="text-xs font-black text-salon-olive uppercase tracking-[0.1em] mb-5">
-                  2. Tu espacio
-                </h2>
-                
-                <div className="flex items-center justify-between mb-6 bg-salon-yellow/20 p-4 rounded-2xl border border-salon-yellow hand-drawn">
-                  <span className="text-xs text-salon-brown font-bold uppercase tracking-wider">Duración total:</span>
-                  <span className="font-black text-xl text-salon-brown">{totalDuration} min</span>
-                </div>
-                
-                <BookingCalendar 
-                  onDateTimeSelect={(d, t) => { setBookingDate({date: d, time: t}); setShowClientForm(false); }} 
-                  totalDuration={totalDuration} 
-                />
-            </div>
           </section>
-        )}
 
-        {selectedServices.length > 0 && bookingDate && showClientForm && (
-           <section className="mt-8 animate-in fade-in slide-in-from-bottom-4 relative z-20">
-             <div className="bg-white shadow-folk border-2 border-salon-brown overflow-hidden rounded-2xl">
-                <ClientForm 
-                  onSubmit={handleFinalBooking} 
+          {selectedServices.length > 0 && (
+            <section className={`mt-10 ${showClientForm ? 'opacity-50 pointer-events-none' : 'animate-in fade-in'}`} aria-labelledby="paso-fecha">
+              <div className="rounded-3xl border-2 border-salon-olive/20 bg-white/90 p-5 shadow-sm backdrop-blur-md sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 id="paso-fecha" className="text-xs font-black uppercase tracking-[0.15em] text-salon-olive">
+                    2. Tu espacio
+                  </h2>
+                  <span className="rounded-full bg-salon-honey/15 px-3 py-1 text-[11px] font-black text-salon-brown">
+                    {totalDuration} min
+                  </span>
+                </div>
+
+                <BookingCalendar
+                  onDateTimeSelect={(d, t) => { setBookingDate({ date: d, time: t }); setShowClientForm(false); }}
+                  totalDuration={totalDuration}
+                />
+              </div>
+            </section>
+          )}
+
+          {selectedServices.length > 0 && bookingDate && showClientForm && (
+            <section id="tus-datos" className="mt-8 scroll-mt-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="overflow-hidden rounded-3xl border-2 border-salon-brown bg-white shadow-folk">
+                <ClientForm
+                  onSubmit={handleFinalBooking}
                   isSubmitting={isSubmitting}
                   onGoBack={() => {
                     setShowClientForm(false);
                     setBookingDate(null);
                   }}
                 />
-             </div>
-           </section>
-        )}
-        <footer className="text-center py-6 mt-4">
-          <p className="text-[10px] text-salon-gray/50 uppercase tracking-widest font-bold">
-            © Tangible Nails & Art Studio
-          </p>
-        </footer>
+              </div>
+            </section>
+          )}
 
-        <div className="h-48 w-full"></div>
+          <footer className="py-8 text-center lg:text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-salon-gray/60">
+              © Tangible Nails &amp; Art Studio
+            </p>
+          </footer>
 
-        {selectedServices.length > 0 && !showClientForm && (
-          <div className="fixed bottom-4 left-0 w-full z-50 px-4">
-            <div className="max-w-md mx-auto">
-              <button 
-                disabled={!bookingDate}
-                onClick={() => {
-                   setShowClientForm(true);
-                   setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
-                }}
-                className={`
-                  w-full py-4 px-6 flex justify-between items-center transition-all duration-300 shadow-folk border-2 border-salon-olive rounded-2xl
-                  ${bookingDate 
-                    ? 'bg-salon-olive text-salon-white hover:scale-[1.02] active:scale-[0.98]' 
-                    : 'bg-white text-salon-gray border-salon-gray/30 cursor-not-allowed opacity-90'
-                  }
-                `}
-              >
-                <div className="text-left">
-                  <span className="block text-[10px] uppercase tracking-widest mb-1 font-bold">
-                    {bookingDate ? 'CONTINUAR' : 'ELIGE HORA'}
-                  </span>
-                  <span className="font-black text-xl">${totalPrice}</span>
-                </div>
-                {bookingDate && (
-                  <svg className="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
+          {/* Espacio para que la barra inferior (celular) no tape el final. */}
+          <div className="h-28 lg:hidden" aria-hidden="true" />
+        </div>
+      </div>
+
+      {/* ── Barra inferior (celular / tablet) ───────────────────────────── */}
+      {selectedServices.length > 0 && !showClientForm && (
+        <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 lg:hidden bg-gradient-to-t from-salon-bg via-salon-bg/90 to-transparent">
+          <button
+            disabled={!bookingDate}
+            onClick={continueToForm}
+            className={`mx-auto flex w-full max-w-md items-center justify-between rounded-2xl border-2 px-5 py-3.5 shadow-folk transition-all duration-300 ${
+              bookingDate
+                ? 'border-salon-olive bg-salon-olive text-white active:scale-[0.98]'
+                : 'cursor-not-allowed border-salon-gray/20 bg-white text-salon-gray'
+            }`}
+          >
+            <span className="text-left">
+              <span className="block text-[10px] font-bold uppercase tracking-widest opacity-80">
+                {selectedServices.length} {selectedServices.length === 1 ? 'servicio' : 'servicios'} · {totalDuration} min
+              </span>
+              <span className="text-xl font-black tabular-nums">${totalPrice}</span>
+            </span>
+            <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest">
+              {bookingDate ? 'Continuar' : 'Elige fecha y hora'}
+              {bookingDate && (
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              )}
+            </span>
+          </button>
+        </div>
+      )}
     </main>
   );
 }

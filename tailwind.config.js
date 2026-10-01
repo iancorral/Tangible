@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // En iPhone un "hover" se queda pegado después de tocar (tarjetas que siguen
+  // agrandadas). Con esto, hover:* solo aplica en dispositivos con mouse.
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],

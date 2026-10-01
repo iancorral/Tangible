@@ -160,14 +160,11 @@ export default function SchedulePage() {
   };
 
   return (
-    <main className="min-h-screen p-4 md:p-10 bg-salon-bg relative">
+    <main className="min-h-[100dvh] p-4 md:p-10 bg-salon-bg relative">
       <MuralDecorations />
       <div className="max-w-2xl mx-auto relative z-10">
 
         <header className="mb-8">
-          <a href="/admin" className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block">
-            ← Volver al panel
-          </a>
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
             Mi Horario
           </h1>

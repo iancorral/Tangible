@@ -70,9 +70,11 @@ export default function PaymentBadge({ paymentStatus, appStatus, createdByAdmin,
             : ""}
         </span>
       )}
-      {createdByAdmin && (
-        <span className="inline-flex items-center px-2 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider bg-salon-lavender/10 text-salon-lavender border-salon-lavender/30">
-          Admin
+      {/* Casi todas las citas las agenda la dueña; marcar esas era ruido.
+          Lo que vale la pena notar es la excepción: una reserva de la web. */}
+      {createdByAdmin === false && (
+        <span className="inline-flex items-center px-2 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider bg-salon-olive/10 text-salon-olive border-salon-olive/30">
+          Web
         </span>
       )}
     </div>

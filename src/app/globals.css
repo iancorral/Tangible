@@ -126,3 +126,52 @@ body::before {
   0% { transform: translate(0, 0) rotate(0deg); }
   100% { transform: translate(20px, 20px) rotate(3deg); }
 }
+/* ─────────────────────────────────────────────────────────────────────────
+   iOS / pantallas táctiles
+   La dueña usa el panel a diario como app instalada en iPhone; estas reglas
+   quitan los tropiezos típicos de Safari sin afectar escritorio.
+   ───────────────────────────────────────────────────────────────────────── */
+
+html {
+  /* Sin el destello gris de Safari al tocar, y sin que el texto crezca solo
+     al girar el teléfono. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Elimina la espera de doble toque (zoom) en botones y enlaces. */
+a, button, [role="button"], label, summary { touch-action: manipulation; }
+
+/* Safari en iOS hace zoom a todo campo con letra menor a 16px al enfocarlo.
+   Solo aplica en iOS (-webkit-touch-callout); en escritorio se respeta el
+   tamaño de diseño. Los campos grandes (títulos) conservan su tamaño. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([class*="text-lg"]):not([class*="text-xl"]):not([class*="text-2xl"]),
+  select,
+  textarea:not([class*="text-lg"]) {
+    font-size: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-ambient { animation: none; }
+  .hand-drawn:hover, .card-hover:hover { transform: none; }
+}
+
+@layer utilities {
+  /* Áreas seguras del iPhone (notch / barra de inicio). Requieren
+     viewport-fit=cover, declarado en app/layout.tsx. */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .bottom-safe { bottom: env(safe-area-inset-bottom); }
+  .scroll-touch { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[sheetUp"] { animation: none !important; }
+}

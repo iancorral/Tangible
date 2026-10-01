@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Service = {
   id: string;
@@ -39,6 +40,7 @@ export default function EditAppointmentModal({
   onUpdated,
   onStatusChange,
 }: Props) {
+  useBodyScrollLock();
   const isCancelled = appointment.status === "CANCELLED";
   const [step, setStep] = useState<1 | 2>(1);
 
