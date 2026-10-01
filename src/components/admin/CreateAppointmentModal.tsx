@@ -102,15 +102,22 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
       return;
     }
     setSearchingClient(true);
-    const res = await fetch(`/api/admin/clients?phone=${digits}`);
-    const data = await res.json();
-    setPastAppointments(data.appointments ?? []);
-    setPastTotal(data.total ?? 0);
+    try {
+      const res = await fetch(`/api/admin/clients?phone=${digits}`);
+      const data = res.ok ? await res.json() : {};
+      setPastAppointments(data.appointments ?? []);
+      setPastTotal(data.total ?? 0);
 
-    if ((data.appointments ?? []).length > 0 && !clientName) {
-      setClientName(data.appointments[0].clientName);
+      if ((data.appointments ?? []).length > 0 && !clientName) {
+        setClientName(data.appointments[0].clientName);
+      }
+    } catch {
+      // El historial es de ayuda; sin red simplemente no se muestra.
+      setPastAppointments([]);
+      setPastTotal(0);
+    } finally {
+      setSearchingClient(false);
     }
-    setSearchingClient(false);
   }, [clientName]);
 
   useEffect(() => {
@@ -208,7 +215,9 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
 
     const trimmedPhone = clientPhone.trim();
 
-    const res = await fetch("/api/admin/appointments", {
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -220,7 +229,14 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
         depositAmount: safeDepositAmount,
         depositPaid: useDeposit ? depositPaid : false,
       }),
-    });
+      });
+    } catch {
+      // Sin respuesta no se sabe si llegó. Reintentar es seguro: el servidor
+      // reconoce la misma cita repetida en pocos minutos y no la duplica.
+      setError("No hay conexión o la señal se cortó. Revisa tu internet y vuelve a tocar Agendar — no se duplicará.");
+      setSubmitting(false);
+      return;
+    }
 
     if (res.ok) {
       const hasPhone = trimmedPhone.length > 0;
@@ -240,18 +256,17 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
       setResult({ confirmUrl, isPast, hasPhone });
       onCreated(); 
     } else {
-      const data = await res.json();
-      const fieldErrors = data?.details
-        ? Object.entries(data.details)
-            .filter(([k]) => k !== "_errors")
-            .map(([field, val]) => {
-              const msg = (val as { _errors?: string[] })?._errors?.[0];
-              return msg ? `${field}: ${msg}` : null;
-            })
-            .filter(Boolean)
-            .join(" · ")
-        : "";
-      setError(fieldErrors || data.error || "Error al crear la cita.");
+      const data: { error?: string; fields?: Record<string, string> } =
+        await res.json().catch(() => ({}));
+      // Los mensajes por campo ya vienen en español y dicen qué corregir.
+      const fieldMessages = Object.values(data.fields ?? {}).join(" · ");
+      setError(
+        fieldMessages ||
+          data.error ||
+          (res.status >= 500
+            ? "El servidor tuvo un problema. Espera unos segundos y vuelve a intentarlo."
+            : "No se pudo crear la cita.")
+      );
     }
 
     setSubmitting(false);

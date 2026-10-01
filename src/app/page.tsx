@@ -8,6 +8,7 @@ import { CategoryAccordion } from '@/components/bookings/ServiceCard';
 import BookingCalendar from '@/components/bookings/BookingCalendar';
 import ClientForm from '@/components/bookings/ClientForm';
 import { buildClientBookingRequestMessage, buildWhatsAppUrl } from '@/lib/whatsapp';
+import { chihuahuaToUTC } from '@/lib/timezone';
 
 export default function Home() {
   const [services, setServices] = useState<Service[]>([]);
@@ -49,14 +50,15 @@ export default function Home() {
     setIsSubmitting(true);
 
     const [hours, minutes] = bookingDate.time.split(':').map(Number);
-    const finalDate = new Date(
+    // The slot is a Chihuahua wall-clock time. Building it in the browser's own
+    // zone would shift it for anyone whose phone is set elsewhere (Juárez
+    // observes DST, Chihuahua city does not).
+    const finalDate = chihuahuaToUTC(
       bookingDate.date.getFullYear(),
-      bookingDate.date.getMonth(),
+      bookingDate.date.getMonth() + 1,
       bookingDate.date.getDate(),
       hours,
-      minutes,
-      0,
-      0
+      minutes
     );
 
     try {
@@ -72,11 +74,15 @@ export default function Home() {
         })
       });
 
-      if (response.ok) setBookingSuccess(true);
-      else alert("Error al agendar.");
+      if (response.ok) {
+        setBookingSuccess(true);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? "No se pudo agendar. Inténtalo de nuevo.");
+      }
     } catch (error) {
       console.error(error);
-      alert("Error de conexión.");
+      alert("No hay conexión. Revisa tu internet e inténtalo de nuevo.");
     } finally {
       setIsSubmitting(false);
     }

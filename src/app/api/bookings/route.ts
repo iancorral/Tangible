@@ -4,16 +4,11 @@ import { addMinutes } from 'date-fns';
 import { z } from 'zod';
 import { isSlotBookable } from '@/lib/availability';
 import { resolveCustomerId } from '@/lib/customers';
+import { personNameSchema, phoneSchema } from '@/lib/validation';
 
 const bookingSchema = z.object({
-  clientName: z
-    .string()
-    .min(2, "Nombre muy corto")
-    .max(100)
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/, "Solo se permiten letras"),
-  clientPhone: z
-    .string()
-    .regex(/^\+?[\d\s\-]{10,15}$/, "Teléfono inválido"),
+  clientName: personNameSchema,
+  clientPhone: phoneSchema,
   serviceIds: z
     .array(z.string().regex(/^[a-f\d]{24}$/i, "ID inválido"))
     .min(1)
@@ -39,7 +34,11 @@ export async function POST(req: Request) {
     const validation = bookingSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({ error: "Datos incorrectos", details: validation.error.format() }, { status: 400 });
+      // The first problem, in words the client can act on — not the schema.
+      return NextResponse.json(
+        { error: validation.error.issues[0]?.message ?? "Revisa tus datos" },
+        { status: 400 }
+      );
     }
 
     const { serviceIds, date, clientName, clientPhone } = validation.data;

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { maskPhone } from "@/lib/phone";
-import type { Prisma } from "@prisma/client";
+import { matchesClient } from "@/lib/search";
 
 /**
  * The studio has tens of clients, not thousands, so the list is returned whole
@@ -19,20 +19,14 @@ export async function GET(req: Request) {
 
   const term = (new URL(req.url).searchParams.get("q") ?? "").trim();
 
-  const where: Prisma.CustomerWhereInput = {};
-  if (term.length >= 2) {
-    const digits = term.replace(/\D/g, "");
-    where.OR = [
-      { name: { contains: term, mode: "insensitive" } },
-      ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
-    ];
-  }
-
-  const customers = await prisma.customer.findMany({
-    where,
-    take: MAX_CUSTOMERS,
+  // Filtered in memory so the match ignores accents (see lib/search.ts).
+  const all = await prisma.customer.findMany({
     select: { id: true, name: true, phone: true, createdAt: true },
   });
+  const customers = (term.length >= 2 ? all.filter((c) => matchesClient(c, term)) : all).slice(
+    0,
+    MAX_CUSTOMERS
+  );
 
   if (customers.length === 0) {
     return NextResponse.json({ customers: [] });

@@ -28,7 +28,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
         return;
       }
 
-      const safeName = parsed.name?.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g, "").trim();
+      const safeName = parsed.name?.replace(/[^\p{L}\p{M}\s.'\-]/gu, "").trim();
       const safePhone = parsed.phone?.replace(/[^0-9+]/g, "").trim();
 
       if (safeName && safePhone) {
