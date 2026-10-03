@@ -45,13 +45,13 @@ export default function AdminTimeGrid({ selectedTime, onSelect, dayAppointments,
               selected
                 ? "bg-salon-lavender text-white border-salon-lavender"
                 : conflict
-                ? "bg-salon-terracotta/5 text-salon-terracotta border-salon-terracotta/25 hover:border-salon-terracotta"
+                ? "bg-salon-mustard-50 text-salon-mustard-700 border-salon-mustard-200 hover:border-salon-mustard-400"
                 : "bg-white text-salon-brown border-salon-gray/20 hover:border-salon-olive"
             }`}
           >
             {t}
             {conflict && !selected && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-salon-terracotta rounded-full border border-white" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-salon-mustard-400 rounded-full border border-white" />
             )}
           </button>
         );

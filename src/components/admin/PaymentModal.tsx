@@ -200,8 +200,8 @@ export default function PaymentModal({
                     };
                     const colors = {
                       PENDING: paymentStatus === s
-                        ? "bg-salon-terracotta text-white border-salon-terracotta"
-                        : "bg-white text-salon-terracotta border-salon-terracotta/25",
+                        ? "bg-salon-mustard-400 text-salon-brown border-salon-mustard-400"
+                        : "bg-white text-salon-mustard-700 border-salon-mustard-200",
                       PARTIAL: paymentStatus === s
                         ? "bg-blue-500 text-white border-blue-500"
                         : "bg-white text-blue-600 border-blue-200",

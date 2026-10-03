@@ -36,9 +36,20 @@ module.exports = {
         'salon-lavender': '#D4609C',   
         // Rosa polvo, tomado de las mejillas de la ilustración del logo. Es el
         // acento sobre botones café y el tinte de las zonas destacadas. Sustituye
-        // a los amarillos (salon-yellow / salon-honey), que se retiraron a
-        // propósito: no los vuelvas a agregar sin hablarlo con la dueña.
+        // al amarillo neón (salon-yellow) y al miel, que se retiraron a pedido
+        // de la dueña.
         'salon-blush': '#F3C6D3',
+        // Mostaza apagada SOLO para el estado "Pendiente" (pagos, puntos del
+        // calendario, avisos). La dueña quiere que pendiente se lea amarillo,
+        // pero suave; no usar como acento general. 700 cumple contraste AA
+        // sobre 50.
+        'salon-mustard': {
+          50: '#FBF4DE',
+          100: '#F6EAC6',
+          200: '#EAD9A3',
+          400: '#D9B456',
+          700: '#7D5E14',
+        },
         'salon-olive': '#6B7135',     
         'salon-terracotta': '#C4522A', 
         'salon-gray': '#7A746C',       

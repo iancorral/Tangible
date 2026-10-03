@@ -316,7 +316,7 @@ function CalendarContent() {
                                 ? "bg-green-500"
                                 : a.paymentStatus === "PARTIAL"
                                 ? "bg-blue-400"
-                                : "bg-salon-terracotta"
+                                : "bg-salon-mustard-400"
                             }`}
                           />
                         ))}
@@ -334,7 +334,7 @@ function CalendarContent() {
 
             <div className="flex gap-4 mt-4 pt-4 border-t border-salon-gray/10">
               {[
-                { color: "bg-salon-terracotta", label: "Pendiente" },
+                { color: "bg-salon-mustard-400", label: "Pendiente" },
                 { color: "bg-blue-400",  label: "Anticipo" },
                 { color: "bg-green-500", label: "Pagado" },
                 { color: "bg-salon-pink rounded-[3px]", label: "Nota" },

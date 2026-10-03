@@ -174,18 +174,3 @@ a, button, [role="button"], label, summary { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[sheetUp"] { animation: none !important; }
 }
-
-/* Flor del fondo: giro muy lento; destellos que titilan como brillo de esmalte. */
-.spin-slow { animation: spinSlow 90s linear infinite; transform-origin: 50% 50%; }
-@keyframes spinSlow { to { transform: rotate(360deg); } }
-
-.twinkle { animation: twinkle 3.2s ease-in-out infinite; }
-@keyframes twinkle {
-  0%, 100% { opacity: 0.15; transform: scale(0.6) rotate(0deg); }
-  50%      { opacity: 0.85; transform: scale(1) rotate(20deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spin-slow, .twinkle { animation: none; }
-  .twinkle { opacity: 0.5; }
-}

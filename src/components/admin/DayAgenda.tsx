@@ -51,7 +51,7 @@ const ADMIN_START = 6 * 60;   // 06:00
 const ADMIN_END = 22 * 60;    // 22:00
 
 const PAYMENT_META: Record<string, { label: string; classes: string }> = {
-  PENDING: { label: "Pendiente", classes: "bg-salon-terracotta/5 border-salon-terracotta/25 text-salon-terracotta" },
+  PENDING: { label: "Pendiente", classes: "bg-salon-mustard-50 border-salon-mustard-200 text-salon-mustard-700" },
   PARTIAL: { label: "Anticipo",  classes: "bg-blue-50 border-blue-200 text-blue-800" },
   PAID:    { label: "Pagado",    classes: "bg-green-50 border-green-200 text-green-800" },
 };

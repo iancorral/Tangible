@@ -254,9 +254,9 @@ export default function AdminDashboard() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          {/* COLUMNA LATERAL: métricas y recordatorios (arriba en celular) */}
+          {/* COLUMNA LATERAL: primero los recordatorios (son una tarea, deben
+              verse sin hacer scroll en el celular) y luego las métricas. */}
           <aside className="space-y-6 lg:order-2 lg:sticky lg:top-8">
-            <MetricsDashboard layout="rail" />
             {/* RECORDATORIOS — citas de mañana */}
             {reminders.length > 0 && (
               <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-3xl p-5 shadow-sm">
@@ -338,6 +338,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            <MetricsDashboard layout="rail" />
           </aside>
 
           {/* CITAS */}
@@ -358,6 +359,10 @@ export default function AdminDashboard() {
                 </button>
               ))}
             </div>
+
+            <p className="mb-3 px-1 text-[10px] font-bold uppercase tracking-wider text-salon-gray">
+              Toca una cita para administrarla en la Agenda
+            </p>
 
             {loading ? (
               <div className="space-y-3">

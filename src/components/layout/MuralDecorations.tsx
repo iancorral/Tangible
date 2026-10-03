@@ -1,28 +1,10 @@
 "use client";
 
 /**
- * Fondo "mural" de Tangible: manchas orgánicas, enredadera, olas y una flor
- * dibujada a mano con destellos. Sin amarillos (ver salon-blush en
- * tailwind.config.js). Todo el movimiento se apaga con "Reducir movimiento".
+ * Fondo "mural" de Tangible: manchas orgánicas, enredadera, olas y el sol.
+ * Sin amarillos: la mancha y el centro del sol son durazno. El movimiento se
+ * apaga con "Reducir movimiento" (globals.css).
  */
-
-// Pétalos de la flor: seis elipses alrededor del centro.
-const PETALS = [0, 60, 120, 180, 240, 300];
-
-// Destellos alrededor de la flor: posición (% del contenedor), tamaño y retraso.
-const SPARKLES = [
-  { top: "6%", right: "34%", size: 14, delay: "0s" },
-  { top: "24%", right: "6%", size: 10, delay: "-1.2s" },
-  { top: "30%", right: "28%", size: 8, delay: "-2.1s" },
-];
-
-function Sparkle({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0Z" fill="#D4609C" />
-    </svg>
-  );
-}
 
 export default function MuralDecorations() {
   return (
@@ -60,31 +42,13 @@ export default function MuralDecorations() {
         <circle cx="15" cy="150" r="4" fill="#E38CCD" stroke="none" />
       </svg>
 
-      {/* Flor dibujada a mano (antes un sol) con destellos */}
-      <div className="absolute top-4 -right-2 w-28 h-28 sm:top-8 sm:right-10 sm:w-44 sm:h-44 float-ambient">
-        <svg className="w-full h-full opacity-55 sm:opacity-70 spin-slow" viewBox="0 0 100 100">
-          {PETALS.map((angle) => (
-            <ellipse
-              key={angle}
-              cx="50"
-              cy="27"
-              rx="10"
-              ry="17"
-              transform={`rotate(${angle} 50 50)`}
-              fill="#F3C6D3"
-              stroke="#D6705A"
-              strokeWidth="1.4"
-            />
-          ))}
-          <circle cx="50" cy="50" r="9" fill="#D6705A" />
-          <circle cx="50" cy="50" r="15" fill="none" stroke="#D6705A" strokeWidth="1.2" strokeDasharray="3 4" />
-        </svg>
-        {SPARKLES.map((s, i) => (
-          <span key={i} className="absolute twinkle" style={{ top: s.top, right: s.right, animationDelay: s.delay }}>
-            <Sparkle size={s.size} />
-          </span>
-        ))}
-      </div>
+      {/* Sol: el dibujo original, con el centro durazno en lugar de amarillo. */}
+      <svg className="absolute top-10 right-10 w-40 h-40 opacity-50 float-ambient" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="12" fill="#F2B8A8" />
+        <path d="M50 20 L 50 10 M 50 80 L 50 90 M 20 50 L 10 50 M 80 50 L 90 50" stroke="#D6705A" strokeWidth="2" />
+        <path d="M71 29 L 78 22 M 29 71 L 22 78 M 29 29 L 22 22 M 71 71 L 78 78" stroke="#D6705A" strokeWidth="2" />
+        <circle cx="50" cy="50" r="20" fill="none" stroke="#D6705A" strokeWidth="1.5" strokeDasharray="4 4" />
+      </svg>
     </div>
   );
 }
