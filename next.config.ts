@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Solo en desarrollo: permite abrir `npm run dev` desde el celular en la
+  // misma red Wi-Fi (http://192.168.x.x:3000). No afecta producción.
+  allowedDevOrigins: ["192.168.*.*"],
   async headers() {
     return [
       {

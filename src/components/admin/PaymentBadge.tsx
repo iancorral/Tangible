@@ -13,10 +13,10 @@ interface Props {
 const PAYMENT_CONFIG = {
   PENDING: {
     label: "Pendiente",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-    dot: "bg-amber-400",
+    bg: "bg-salon-terracotta/5",
+    text: "text-salon-terracotta",
+    border: "border-salon-terracotta/25",
+    dot: "bg-salon-terracotta",
   },
   PARTIAL: {
     label: "Anticipo",

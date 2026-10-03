@@ -452,7 +452,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
               </div>
 
               {pastAppointments.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-2xl p-4 border border-salon-yellow/50">
+                <div className="bg-salon-blush/25 rounded-2xl p-4 border border-salon-pink/30">
                   <div className="flex justify-between items-center mb-2">
                     <p className="text-[10px] font-black text-salon-brown uppercase tracking-wider">
                       Clienta recurrente
@@ -618,7 +618,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-xl p-3 border border-salon-yellow/50 flex justify-between">
+                <div className="bg-salon-blush/25 rounded-xl p-3 border border-salon-pink/30 flex justify-between">
                   <span className="text-xs font-bold text-salon-brown">
                     {selectedServices.length} servicio(s) · {totalDuration} min
                   </span>
@@ -676,7 +676,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                   )}
 
                   {!checkingConflict && conflictWith && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-700 font-bold flex items-start gap-2">
+                    <div className="bg-salon-terracotta/5 border border-salon-terracotta/25 rounded-xl p-3 text-[11px] text-salon-terracotta font-bold flex items-start gap-2">
                       <svg className="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         <line x1="12" y1="9" x2="12" y2="13"/>
@@ -702,7 +702,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                     <button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                      className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                     >
                       {submitting ? "Creando..." : "Crear cita"}
                     </button>
@@ -780,7 +780,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                     <button
                       onClick={handleSubmit}
                       disabled={submitting || !selectedDate || !selectedTime}
-                      className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                      className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                     >
                       {submitting ? "Creando..." : "Crear cita"}
                     </button>

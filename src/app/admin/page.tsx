@@ -10,6 +10,7 @@ import WhatsAppIcon from '@/components/icons/WhatsAppIcon';
 import { SensitiveAmount } from '@/components/privacy';
 import { getAppointmentAmount, isFreeAmount } from '@/lib/pricing';
 import { buildReminderUrl } from '@/lib/whatsapp';
+import { OWNER_NAME } from '@/lib/config/business';
 import {
   formatChihuahuaTime,
   formatChihuahuaDate,
@@ -201,16 +202,23 @@ export default function AdminDashboard() {
             <p suppressHydrationWarning className="text-[11px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
               {formatChihuahuaDate(now)}
             </p>
-            <h1 suppressHydrationWarning className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.12em] mt-1">
-              {greeting}
+            {/* En celular el nombre baja a su propia línea para no apretarse
+                junto al botón; desde sm cabe en una sola. */}
+            <h1 suppressHydrationWarning className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.12em] leading-tight mt-1">
+              <span className="block sm:inline">{greeting},</span>{' '}
+              <span className="block sm:inline text-salon-terracotta">{OWNER_NAME}</span>
             </h1>
           </div>
+          {/* En celular es un botón redondo para dejarle el ancho al saludo. */}
           <Link
             href="/admin/calendar?new=1"
-            className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-salon-brown px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-salon-brown/90 active:scale-[0.98]"
+            aria-label="Nueva cita"
+            className="shrink-0 inline-flex h-12 w-12 items-center justify-center gap-2 rounded-full bg-salon-brown text-white shadow-md transition-colors hover:bg-salon-brown/90 active:scale-[0.96] sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[11px] sm:font-black sm:uppercase sm:tracking-widest"
           >
-            <span className="text-base leading-none" aria-hidden="true">＋</span>
-            <span>Nueva cita</span>
+            <svg className="h-5 w-5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="hidden sm:inline">Nueva cita</span>
           </Link>
         </header>
 
@@ -251,7 +259,7 @@ export default function AdminDashboard() {
             <MetricsDashboard layout="rail" />
             {/* RECORDATORIOS — citas de mañana */}
             {reminders.length > 0 && (
-              <div className="bg-salon-honey/10 border border-salon-honey/40 rounded-3xl p-5 shadow-sm">
+              <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-3xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3 gap-3">
                   <h2 className="text-xs font-black text-salon-brown uppercase tracking-widest">
                     Recordatorios para mañana ({reminders.length})
@@ -259,7 +267,7 @@ export default function AdminDashboard() {
                   {unopenedCount > 0 && (
                     <button
                       onClick={openNextReminder}
-                      className="flex items-center gap-2 px-4 py-2 bg-salon-brown text-salon-honey rounded-xl text-[11px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97] shadow-sm shrink-0"
+                      className="flex items-center gap-2 px-4 py-2 bg-salon-brown text-salon-blush rounded-xl text-[11px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97] shadow-sm shrink-0"
                     >
                       <WhatsAppIcon className="w-3.5 h-3.5" />
                       Abrir siguiente ({unopenedCount})
@@ -276,7 +284,7 @@ export default function AdminDashboard() {
                   {reminders.map((r) => {
                     const opened = openedIds.has(r.id);
                     return (
-                      <div key={r.id} className={`flex items-center justify-between bg-white rounded-2xl px-4 py-3 border transition-all shadow-sm hover:shadow-md ${r.reminderSent ? 'opacity-50 border-gray-100' : opened ? 'border-salon-olive/40' : 'border-salon-honey/30'}`}>
+                      <div key={r.id} className={`flex items-center justify-between bg-white rounded-2xl px-4 py-3 border transition-all shadow-sm hover:shadow-md ${r.reminderSent ? 'opacity-50 border-gray-100' : opened ? 'border-salon-olive/40' : 'border-salon-pink/25'}`}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-black text-salon-brown text-sm truncate">{r.clientName}</span>

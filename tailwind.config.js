@@ -34,10 +34,11 @@ module.exports = {
         'salon-brown': '#2C1F0E',      
         'salon-black': '#1a1a1a',      
         'salon-lavender': '#D4609C',   
-        'salon-yellow': '#F9E040',
-        // Dorado terroso para Premios/Clientas: mantiene la idea de "recompensa"
-        // sin el neón de salon-yellow, y convive con terracota y olivo.
-        'salon-honey': '#D8A657',
+        // Rosa polvo, tomado de las mejillas de la ilustración del logo. Es el
+        // acento sobre botones café y el tinte de las zonas destacadas. Sustituye
+        // a los amarillos (salon-yellow / salon-honey), que se retiraron a
+        // propósito: no los vuelvas a agregar sin hablarlo con la dueña.
+        'salon-blush': '#F3C6D3',
         'salon-olive': '#6B7135',     
         'salon-terracotta': '#C4522A', 
         'salon-gray': '#7A746C',       

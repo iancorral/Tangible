@@ -11,6 +11,8 @@ import BookingSummary from '@/components/bookings/BookingSummary';
 import { buildClientBookingRequestMessage, buildWhatsAppUrl } from '@/lib/whatsapp';
 import { chihuahuaToUTC } from '@/lib/timezone';
 
+const CATEGORY_ORDER = ['Manicura y Pedicura', 'Uñas', 'Maquillaje y Peinado', 'Cejas', 'Extras'];
+
 export default function Home() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]); 
@@ -108,7 +110,7 @@ export default function Home() {
       
         <div className="z-10 bg-white/90 backdrop-blur-sm p-8 rounded-2xl border-2 border-salon-black shadow-folk max-w-sm animate-in fade-in zoom-in">
       
-            <div className="w-20 h-20 bg-salon-honey rounded-full flex items-center justify-center mb-4 mx-auto border-2 border-salon-black">
+            <div className="w-20 h-20 bg-salon-blush rounded-full flex items-center justify-center mb-4 mx-auto border-2 border-salon-black">
               <svg className="w-10 h-10 text-salon-black" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
@@ -140,6 +142,16 @@ export default function Home() {
   }
 
   const step = !selectedServices.length ? 1 : !bookingDate ? 2 : 3;
+
+  // MongoDB no garantiza el orden de los documentos: sin esto las categorías
+  // cambiaban de lugar entre visitas. Las conocidas van en este orden y
+  // cualquier categoría nueva se agrega al final, en orden alfabético.
+  const orderedCategories = Array.from(new Set(services.map(s => s.category ?? 'General'))).sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a);
+    const ib = CATEGORY_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib);
+    return a.localeCompare(b, 'es');
+  });
 
   const continueToForm = () => {
     setShowClientForm(true);
@@ -228,7 +240,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-3">
-                {Array.from(new Set(services.map(s => s.category ?? 'General'))).map(category => (
+                {orderedCategories.map(category => (
                   <CategoryAccordion
                     key={category}
                     category={category}
@@ -248,7 +260,7 @@ export default function Home() {
                   <h2 id="paso-fecha" className="text-xs font-black uppercase tracking-[0.15em] text-salon-olive">
                     2. Tu espacio
                   </h2>
-                  <span className="rounded-full bg-salon-honey/15 px-3 py-1 text-[11px] font-black text-salon-brown">
+                  <span className="rounded-full bg-salon-blush/25 px-3 py-1 text-[11px] font-black text-salon-brown">
                     {totalDuration} min
                   </span>
                 </div>

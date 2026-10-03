@@ -200,8 +200,8 @@ export default function PaymentModal({
                     };
                     const colors = {
                       PENDING: paymentStatus === s
-                        ? "bg-amber-400 text-white border-amber-400"
-                        : "bg-white text-amber-600 border-amber-200",
+                        ? "bg-salon-terracotta text-white border-salon-terracotta"
+                        : "bg-white text-salon-terracotta border-salon-terracotta/25",
                       PARTIAL: paymentStatus === s
                         ? "bg-blue-500 text-white border-blue-500"
                         : "bg-white text-blue-600 border-blue-200",
@@ -312,7 +312,7 @@ export default function PaymentModal({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full mt-5 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+          className="w-full mt-5 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>

@@ -160,7 +160,7 @@ export default async function RewardsPage() {
       <section
         className={`rounded-3xl p-6 mb-5 hand-drawn border-2 ${
           complete
-            ? "bg-gradient-to-b from-[#FFFCEB] to-white border-salon-yellow"
+            ? "bg-gradient-to-b from-[#FDF0F4] to-white border-salon-pink/50"
             : "bg-white border-salon-olive/20"
         }`}
       >

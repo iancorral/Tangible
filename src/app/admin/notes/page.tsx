@@ -221,7 +221,7 @@ export default function NotesPage() {
         </header>
 
         {/* Captura rápida */}
-        <div className="flex items-center gap-1 bg-white border-2 border-salon-honey/40 rounded-2xl shadow-sm mb-5 pr-2">
+        <div className="flex items-center gap-1 bg-white border-2 border-salon-pink/30 rounded-2xl shadow-sm mb-5 pr-2">
           <button
             type="button"
             onClick={() => setEditor({ mode: "new" })}
@@ -370,7 +370,7 @@ export default function NotesPage() {
             <button
               type="button"
               onClick={toast.undo}
-              className="px-3 py-1 rounded-lg text-salon-honey font-black uppercase tracking-wider hover:bg-white/10"
+              className="px-3 py-1 rounded-lg text-salon-blush font-black uppercase tracking-wider hover:bg-white/10"
             >
               Deshacer
             </button>

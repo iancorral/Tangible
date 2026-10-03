@@ -46,7 +46,7 @@ export function ServiceCardItem({ service, onSelect, isSelected }: ServiceCardPr
         {service.description && (
           <span className="mt-1 block text-xs font-medium leading-relaxed text-salon-gray">{service.description}</span>
         )}
-        <span className="mt-2 inline-block rounded-md bg-salon-honey/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-salon-brown">
+        <span className="mt-2 inline-block rounded-md bg-salon-blush/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-salon-brown">
           {service.duration} min
         </span>
       </span>
@@ -58,7 +58,7 @@ export function ServiceCardItem({ service, onSelect, isSelected }: ServiceCardPr
 
 const CATEGORY_COLORS: Record<string, { border: string; bg: string; text: string; dot: string }> = {
   'Uñas':                { border: 'border-salon-lavender',   bg: 'bg-salon-lavender/10',   text: 'text-salon-lavender',   dot: 'bg-salon-lavender' },
-  'Extras':              { border: 'border-salon-honey',      bg: 'bg-salon-honey/15',      text: 'text-salon-brown',      dot: 'bg-salon-honey' },
+  'Extras':              { border: 'border-salon-pink/60',      bg: 'bg-salon-blush/25',      text: 'text-salon-brown',      dot: 'bg-salon-blush' },
   'Manicura y Pedicura': { border: 'border-salon-terracotta', bg: 'bg-salon-terracotta/10', text: 'text-salon-terracotta', dot: 'bg-salon-terracotta' },
   'Maquillaje y Peinado':{ border: 'border-salon-olive',      bg: 'bg-salon-olive/10',      text: 'text-salon-olive',      dot: 'bg-salon-olive' },
   'Cejas':               { border: 'border-salon-brown',      bg: 'bg-salon-brown/10',      text: 'text-salon-brown',      dot: 'bg-salon-brown' },

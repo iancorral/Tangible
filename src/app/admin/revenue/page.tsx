@@ -31,7 +31,7 @@ const BUCKET_CONFIG: Record<RevenueBucket, { label: string; color: string; borde
   CASH:     { label: "Efectivo",       color: "bg-emerald-50",          border: "border-emerald-200",        text: "text-emerald-700"    },
   TRANSFER: { label: "Transferencia",  color: "bg-blue-50",             border: "border-blue-200",           text: "text-blue-700"       },
   CARD:     { label: "Tarjeta",        color: "bg-violet-50",           border: "border-violet-200",         text: "text-violet-700"     },
-  PENDING:  { label: "Sin registrar",  color: "bg-amber-50",            border: "border-amber-200",          text: "text-amber-700"      },
+  PENDING:  { label: "Sin registrar",  color: "bg-salon-terracotta/5",            border: "border-salon-terracotta/25",          text: "text-salon-terracotta"      },
   FREE:     { label: "Gratis",         color: "bg-salon-lavender/10",   border: "border-salon-lavender/30",  text: "text-salon-lavender" },
 };
 
@@ -210,7 +210,7 @@ function RevenueContent() {
                                 entry.paymentStatus === "PAID"
                                   ? "bg-emerald-100 text-emerald-700"
                                   : entry.paymentStatus === "PARTIAL"
-                                  ? "bg-amber-100 text-amber-700"
+                                  ? "bg-salon-terracotta/10 text-salon-terracotta"
                                   : "bg-gray-100 text-gray-500"
                               }`}>
                                 {STATUS_LABEL[entry.paymentStatus] ?? entry.paymentStatus}

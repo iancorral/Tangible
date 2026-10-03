@@ -19,7 +19,7 @@ export default function PrivacyToggle({ className = "" }: Props) {
       title={label}
       className={`w-9 h-9 flex items-center justify-center rounded-xl border-2 shadow-sm shrink-0 transition-all hover:scale-105 active:scale-95 ${
         hidden
-          ? "bg-salon-brown border-salon-brown text-salon-yellow"
+          ? "bg-salon-brown border-salon-brown text-salon-blush"
           : "bg-white border-salon-olive/20 text-salon-gray hover:text-salon-olive hover:border-salon-olive/40"
       } ${className}`}
     >

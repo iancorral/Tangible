@@ -382,7 +382,7 @@ export default function EditAppointmentModal({
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-xl p-3 border border-salon-yellow/50 flex justify-between">
+                <div className="bg-salon-blush/25 rounded-xl p-3 border border-salon-pink/30 flex justify-between">
                   <span className="text-xs font-bold text-salon-brown">
                     {selectedServices.length} servicio(s) · {totalDuration} min
                   </span>
@@ -406,7 +406,7 @@ export default function EditAppointmentModal({
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || selectedServiceIds.length === 0}
-                  className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                  className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                 >
                   {submitting ? "Guardando..." : "Guardar cambios"}
                 </button>

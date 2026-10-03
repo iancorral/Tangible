@@ -250,6 +250,6 @@ function TabLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function sheetRowClass(active: boolean) {
   return `flex w-full items-center gap-3 px-4 py-3.5 text-[15px] font-bold text-salon-brown active:bg-salon-brown/5 ${
-    active ? "bg-salon-honey/10" : ""
+    active ? "bg-salon-blush/20" : ""
   }`;
 }

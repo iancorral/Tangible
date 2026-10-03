@@ -8,7 +8,9 @@ import { chihuahuaToUTC, chihuahuaDateKey, formatChihuahuaTime } from "@/lib/tim
 export const NOTE_COLORS = {
   CREAM: { label: "Crema",     card: "bg-white border-salon-gray/15",              swatch: "bg-white border-salon-gray/30" },
   BLUSH: { label: "Rosa",      card: "bg-[#FBEAF2] border-salon-lavender/25",      swatch: "bg-[#F4C6DC] border-salon-lavender/40" },
-  HONEY: { label: "Miel",      card: "bg-[#F8EDD6] border-salon-honey/40",         swatch: "bg-[#EBCF97] border-salon-honey/60" },
+  // La clave sigue siendo HONEY para no tocar notas ya guardadas; el color
+  // dejó de ser amarillo y ahora es lila.
+  HONEY: { label: "Lila",      card: "bg-[#F1E8F5] border-[#B9A0CC]/40",           swatch: "bg-[#D9C6E6] border-[#B9A0CC]/60" },
   SAGE:  { label: "Olivo",     card: "bg-[#EEF0E0] border-salon-olive/25",         swatch: "bg-[#CDD3A8] border-salon-olive/40" },
   CLAY:  { label: "Terracota", card: "bg-[#F8E4DA] border-salon-terracotta/25",    swatch: "bg-[#EDB9A2] border-salon-terracotta/40" },
   SKY:   { label: "Cielo",     card: "bg-[#E6EEF1] border-[#8FAAB6]/40",           swatch: "bg-[#B9CDD6] border-[#8FAAB6]/60" },

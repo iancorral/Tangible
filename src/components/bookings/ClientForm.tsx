@@ -70,7 +70,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
       
       {isReturningUser ? (
         <div className="text-center">
-          <div className="w-16 h-16 bg-salon-honey rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-salon-brown shadow-folk">
+          <div className="w-16 h-16 bg-salon-blush rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-salon-brown shadow-folk">
             <svg className="w-8 h-8 text-salon-brown" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -79,7 +79,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
           <p className="text-xs text-salon-gray mb-6 font-medium">
             Usaremos el número <span className="font-bold text-salon-terracotta">...{phone.slice(-4)}</span>
           </p>
-          <div className="bg-salon-honey/10 border border-salon-honey/40 rounded-xl px-4 py-3 mb-2">
+          <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-4 py-3 mb-2">
             <p className="text-[10px] text-salon-gray leading-relaxed text-center">
               Se requiere depósito de{" "}
               <span className="font-black text-salon-terracotta">$150 MXN</span>{" "}
@@ -159,7 +159,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
           </div>
 
 
-          <div className="bg-salon-honey/10 border border-salon-honey/40 rounded-xl px-4 py-3 mb-2">
+          <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-4 py-3 mb-2">
             <p className="text-[10px] text-salon-gray leading-relaxed text-center">
               Se requiere depósito de{" "}
               <span className="font-black text-salon-terracotta">$150 MXN</span>{" "}

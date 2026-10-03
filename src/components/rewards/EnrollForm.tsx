@@ -124,7 +124,7 @@ export default function EnrollForm() {
         <button
           type="submit"
           disabled={code.length !== CODE_LENGTH || submitting}
-          className="w-full py-4 bg-salon-brown text-salon-yellow font-black text-[11px] uppercase tracking-widest rounded-2xl transition-all disabled:bg-white disabled:text-salon-gray/60 disabled:border-2 disabled:border-salon-gray/20"
+          className="w-full py-4 bg-salon-brown text-salon-blush font-black text-[11px] uppercase tracking-widest rounded-2xl transition-all disabled:bg-white disabled:text-salon-gray/60 disabled:border-2 disabled:border-salon-gray/20"
         >
           {submitting ? "Activando..." : "Activar mi tarjeta"}
         </button>
