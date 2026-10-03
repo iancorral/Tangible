@@ -5,18 +5,13 @@ import { authOptions } from "@/lib/auth";
 import { addMinutes } from "date-fns";
 import { z } from "zod";
 import { resolveCustomerId } from "@/lib/customers";
+import { fieldErrors, optionalPhoneSchema, personNameSchema } from "@/lib/validation";
+
+const DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
 
 const createSchema = z.object({
-  clientName: z
-    .string()
-    .min(2)
-    .max(100)
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ.''\-\s]+$/, "Nombre contiene caracteres no permitidos"),
-  clientPhone: z
-    .string()
-    .regex(/^[\d\s\-().+]{7,20}$/, "Teléfono inválido")
-    .optional()
-    .or(z.literal("")),
+  clientName: personNameSchema,
+  clientPhone: optionalPhoneSchema,
   serviceIds: z
     .array(z.string().regex(/^[a-f\d]{24}$/i))
     .min(1)
@@ -39,7 +34,7 @@ export async function POST(req: Request) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Datos inválidos", details: validation.error.format() },
+        { error: "Revisa los datos de la cita", fields: fieldErrors(validation.error) },
         { status: 400 }
       );
     }
@@ -59,15 +54,34 @@ export async function POST(req: Request) {
     const startDate = new Date(date);
     const endDate = addMinutes(startDate, totalDuration);
 
-    const normalizedPhone = clientPhone && clientPhone.trim() ? clientPhone.trim() : null;
-    const customerId = await resolveCustomerId(clientName, normalizedPhone);
+    // With a bad connection the owner may tap "Agendar" again after a request
+    // that did reach the server. The same client, slot and services within a
+    // few minutes is that retry, not a second booking: hand back the first one.
+    const duplicate = await prisma.appointment.findFirst({
+      where: {
+        date: startDate,
+        clientName,
+        status: "CONFIRMED",
+        createdAt: { gte: new Date(Date.now() - DUPLICATE_WINDOW_MS) },
+      },
+      include: { services: true },
+    });
+    if (
+      duplicate &&
+      duplicate.serviceIDs.length === serviceIds.length &&
+      serviceIds.every((sid) => duplicate.serviceIDs.includes(sid))
+    ) {
+      return NextResponse.json(duplicate, { status: 200 });
+    }
+
+    const customerId = await resolveCustomerId(clientName, clientPhone);
 
     const appointment = await prisma.appointment.create({
       data: {
         date: startDate,
         endDate,
         clientName,
-        clientPhone: normalizedPhone,
+        clientPhone,
         customerId,
         status: "CONFIRMED",
         createdByAdmin: true,

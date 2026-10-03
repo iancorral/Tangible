@@ -5,25 +5,20 @@ import { authOptions } from "@/lib/auth";
 import { addMinutes } from "date-fns";
 import { z } from "zod";
 import { resolveCustomerId } from "@/lib/customers";
+import { fieldErrors, optionalPhoneSchema, personNameSchema } from "@/lib/validation";
 
 const createSchema = z.object({
-  clientName: z
-    .string()
-    .min(2)
-    .max(100)
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ.''\-\s]+$/, "Nombre contiene caracteres no permitidos"),
-  // Opcional: permite dejar la cita sin teléfono (vacío = se limpia a null).
-  clientPhone: z
-    .string()
-    .regex(/^[\d\s\-().+]{7,20}$/, "Teléfono inválido")
-    .optional()
-    .or(z.literal("")),
+  clientName: personNameSchema,
+  // Ausente = no se toca; vacío = se quita el teléfono de la cita.
+  clientPhone: z.undefined().or(optionalPhoneSchema),
   serviceIds: z
     .array(z.string().regex(/^[a-f\d]{24}$/i))
     .min(1)
     .max(10),
   date: z.string().datetime().optional(),
   adminNotes: z.string().max(500).optional().nullable(),
+  // null = volver al precio de catálogo; 0 = cortesía.
+  finalPrice: z.number().min(0).max(100000).nullable().optional(),
   depositAmount: z.number().min(0).nullable().optional(), // ← acepta null
   depositPaid: z.boolean().optional(),
 });
@@ -47,7 +42,7 @@ export async function PATCH(
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Datos inválidos", details: validation.error.format() },
+        { error: "Revisa los datos de la cita", fields: fieldErrors(validation.error) },
         { status: 400 }
       );
     }
@@ -100,14 +95,14 @@ export async function PATCH(
     // Si el campo viene en la petición (aunque sea vacío) se actualiza:
     // vacío → null para poder quitar el teléfono de una cita existente.
     if (data.clientPhone !== undefined) {
-      const phone =
-        data.clientPhone && data.clientPhone.trim() ? data.clientPhone.trim() : null;
+      const phone = data.clientPhone;
       updateData.clientPhone = phone;
       // Keep the customer link in step with the phone on the appointment.
       // Clearing the phone unlinks it: there is no longer anyone to point at.
       updateData.customerId = await resolveCustomerId(data.clientName, phone);
     }
     if (data.adminNotes !== undefined) updateData.adminNotes = data.adminNotes;
+    if (data.finalPrice !== undefined) updateData.finalPrice = data.finalPrice;
     if (serviceConnect) {
       updateData.services = { set: serviceConnect };
     }

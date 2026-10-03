@@ -15,7 +15,9 @@ type Metrics = {
   avgDuration: number;
 };
 
-export default function MetricsDashboard() {
+/** "row": 4 tarjetas en fila (pantalla completa). "rail": 2×2 para la columna lateral. */
+export default function MetricsDashboard({ layout = "row" }: { layout?: "row" | "rail" }) {
+  const grid = layout === "rail" ? "grid grid-cols-2 gap-3" : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4";
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [period, setPeriod] = useState<"week" | "month">("week");
 
@@ -34,7 +36,7 @@ export default function MetricsDashboard() {
   }, [period]);
 
   return (
-    <div className="mb-8 animate-in fade-in">
+    <div className={layout === "rail" ? "" : "mb-8"}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xs font-black text-salon-olive uppercase tracking-widest">
           Resumen
@@ -59,14 +61,14 @@ export default function MetricsDashboard() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className={grid}>
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white rounded-3xl border-2 border-salon-olive/10 p-4 md:p-5 animate-pulse h-24 md:h-28" />
           ))}
         </div>
       ) : metrics ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className={grid}>
             <a
               href={`/admin/revenue?period=${period}`}
               className="bg-white rounded-3xl border-2 border-salon-olive/20 p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 group block"

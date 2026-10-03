@@ -6,6 +6,7 @@ import { es } from "date-fns/locale";
 import AdminTimeGrid, { DayOverviewAppointment } from "@/components/admin/AdminTimeGrid";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { buildConfirmationMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Service = {
   id: string;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export default function CreateAppointmentModal({ onClose, onCreated, preselectedDate, preselectedTime}: Props) {
+  useBodyScrollLock();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [clientName, setClientName] = useState("");
@@ -102,15 +104,22 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
       return;
     }
     setSearchingClient(true);
-    const res = await fetch(`/api/admin/clients?phone=${digits}`);
-    const data = await res.json();
-    setPastAppointments(data.appointments ?? []);
-    setPastTotal(data.total ?? 0);
+    try {
+      const res = await fetch(`/api/admin/clients?phone=${digits}`);
+      const data = res.ok ? await res.json() : {};
+      setPastAppointments(data.appointments ?? []);
+      setPastTotal(data.total ?? 0);
 
-    if ((data.appointments ?? []).length > 0 && !clientName) {
-      setClientName(data.appointments[0].clientName);
+      if ((data.appointments ?? []).length > 0 && !clientName) {
+        setClientName(data.appointments[0].clientName);
+      }
+    } catch {
+      // El historial es de ayuda; sin red simplemente no se muestra.
+      setPastAppointments([]);
+      setPastTotal(0);
+    } finally {
+      setSearchingClient(false);
     }
-    setSearchingClient(false);
   }, [clientName]);
 
   useEffect(() => {
@@ -208,7 +217,9 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
 
     const trimmedPhone = clientPhone.trim();
 
-    const res = await fetch("/api/admin/appointments", {
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -220,7 +231,14 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
         depositAmount: safeDepositAmount,
         depositPaid: useDeposit ? depositPaid : false,
       }),
-    });
+      });
+    } catch {
+      // Sin respuesta no se sabe si llegó. Reintentar es seguro: el servidor
+      // reconoce la misma cita repetida en pocos minutos y no la duplica.
+      setError("No hay conexión o la señal se cortó. Revisa tu internet y vuelve a tocar Agendar — no se duplicará.");
+      setSubmitting(false);
+      return;
+    }
 
     if (res.ok) {
       const hasPhone = trimmedPhone.length > 0;
@@ -240,18 +258,17 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
       setResult({ confirmUrl, isPast, hasPhone });
       onCreated(); 
     } else {
-      const data = await res.json();
-      const fieldErrors = data?.details
-        ? Object.entries(data.details)
-            .filter(([k]) => k !== "_errors")
-            .map(([field, val]) => {
-              const msg = (val as { _errors?: string[] })?._errors?.[0];
-              return msg ? `${field}: ${msg}` : null;
-            })
-            .filter(Boolean)
-            .join(" · ")
-        : "";
-      setError(fieldErrors || data.error || "Error al crear la cita.");
+      const data: { error?: string; fields?: Record<string, string> } =
+        await res.json().catch(() => ({}));
+      // Los mensajes por campo ya vienen en español y dicen qué corregir.
+      const fieldMessages = Object.values(data.fields ?? {}).join(" · ");
+      setError(
+        fieldMessages ||
+          data.error ||
+          (res.status >= 500
+            ? "El servidor tuvo un problema. Espera unos segundos y vuelve a intentarlo."
+            : "No se pudo crear la cita.")
+      );
     }
 
     setSubmitting(false);
@@ -435,7 +452,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
               </div>
 
               {pastAppointments.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-2xl p-4 border border-salon-yellow/50">
+                <div className="bg-salon-blush/25 rounded-2xl p-4 border border-salon-pink/30">
                   <div className="flex justify-between items-center mb-2">
                     <p className="text-[10px] font-black text-salon-brown uppercase tracking-wider">
                       Clienta recurrente
@@ -601,7 +618,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-xl p-3 border border-salon-yellow/50 flex justify-between">
+                <div className="bg-salon-blush/25 rounded-xl p-3 border border-salon-pink/30 flex justify-between">
                   <span className="text-xs font-bold text-salon-brown">
                     {selectedServices.length} servicio(s) · {totalDuration} min
                   </span>
@@ -659,7 +676,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                   )}
 
                   {!checkingConflict && conflictWith && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-700 font-bold flex items-start gap-2">
+                    <div className="bg-salon-mustard-50 border border-salon-mustard-200 rounded-xl p-3 text-[11px] text-salon-mustard-700 font-bold flex items-start gap-2">
                       <svg className="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         <line x1="12" y1="9" x2="12" y2="13"/>
@@ -685,7 +702,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                     <button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                      className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                     >
                       {submitting ? "Creando..." : "Crear cita"}
                     </button>
@@ -763,7 +780,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
                     <button
                       onClick={handleSubmit}
                       disabled={submitting || !selectedDate || !selectedTime}
-                      className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                      className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                     >
                       {submitting ? "Creando..." : "Crear cita"}
                     </button>

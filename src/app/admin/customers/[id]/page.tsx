@@ -176,7 +176,7 @@ export default function CustomerDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-6 md:p-10 bg-salon-bg">
+      <main className="min-h-[100dvh] p-6 md:p-10 bg-salon-bg">
         <p className="text-center py-20 text-salon-gray animate-pulse font-bold text-xs uppercase tracking-widest">
           Cargando clienta...
         </p>
@@ -186,7 +186,7 @@ export default function CustomerDetailPage() {
 
   if (notFound || !customer || !stats) {
     return (
-      <main className="min-h-screen p-6 md:p-10 bg-salon-bg">
+      <main className="min-h-[100dvh] p-6 md:p-10 bg-salon-bg">
         <div className="max-w-2xl mx-auto text-center py-20">
           <p className="text-salon-gray font-bold text-sm uppercase mb-4">
             Clienta no encontrada
@@ -203,7 +203,7 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 md:p-10 relative bg-salon-bg">
+    <main className="min-h-[100dvh] p-6 md:p-10 relative bg-salon-bg">
       <MuralDecorations />
 
       <div className="max-w-2xl mx-auto relative z-10">
@@ -378,7 +378,7 @@ export default function CustomerDetailPage() {
             <button
               type="submit"
               disabled={saving || merging}
-              className="px-6 py-3 bg-salon-brown text-salon-honey rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:hover:scale-100"
+              className="px-6 py-3 bg-salon-brown text-salon-blush rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:hover:scale-100"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>

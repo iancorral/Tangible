@@ -2,20 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { normalizePhone } from "@/lib/phone";
 import { getAppointmentAmount } from "@/lib/pricing";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { personNameSchema, phoneSchema } from "@/lib/validation";
 
 const OBJECT_ID = /^[a-f\d]{24}$/i;
 
 const updateSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Nombre muy corto")
-    .max(100)
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ.'’\-\s]+$/, "Nombre contiene caracteres no permitidos"),
-  phone: z.string().regex(/^[\d\s\-().+]{10,20}$/, "Teléfono inválido"),
+  name: personNameSchema,
+  phone: phoneSchema,
   notes: z.string().max(500).nullable().optional(),
 });
 
@@ -77,13 +73,14 @@ export async function PATCH(
   try {
     const validation = updateSchema.safeParse(await req.json());
     if (!validation.success) {
-      return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: validation.error.issues[0]?.message ?? "Datos inválidos" },
+        { status: 400 }
+      );
     }
 
-    const phone = normalizePhone(validation.data.phone);
-    if (!phone) {
-      return NextResponse.json({ error: "Teléfono inválido" }, { status: 400 });
-    }
+    // phoneSchema already returns the canonical form.
+    const phone = validation.data.phone;
 
     // Explicit conflict check before writing anything. Two customer records for
     // the same person is a real situation (an old number and a new one), but
@@ -112,7 +109,7 @@ export async function PATCH(
     const updated = await prisma.customer.update({
       where: { id },
       data: {
-        name: validation.data.name.trim(),
+        name: validation.data.name,
         phone,
         notes: notes ? notes : null,
       },

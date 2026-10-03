@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { adminPwaMetadata } from "@/lib/pwa-metadata";
 import { PrivacyProvider } from "@/components/privacy";
 import { PRIVACY_COOKIE, isPrivacyEnabled } from "@/lib/privacy";
+import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata = adminPwaMetadata;
 
@@ -19,5 +20,9 @@ export default async function AdminLayout({
   const cookieStore = await cookies();
   const hidden = isPrivacyEnabled(cookieStore.get(PRIVACY_COOKIE)?.value);
 
-  return <PrivacyProvider initialHidden={hidden}>{children}</PrivacyProvider>;
+  return (
+    <PrivacyProvider initialHidden={hidden}>
+      <AdminShell>{children}</AdminShell>
+    </PrivacyProvider>
+  );
 }

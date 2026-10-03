@@ -49,20 +49,21 @@ export default function BookingCalendar({ onDateTimeSelect, totalDuration }: Boo
   }, [reqKey, dateStr, totalDuration]);
 
   return (
-    <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
+    <div className="mt-6 animate-in fade-in slide-in-from-bottom-4">
       <h3 className="font-bold text-salon-olive text-xs uppercase tracking-[0.2em] mb-4">
         Elige tu fecha
       </h3>
 
-      <div className="flex overflow-x-auto pb-6 gap-3 no-scrollbar touch-pan-x pl-1">
+      <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-5 no-scrollbar touch-pan-x scroll-touch sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0">
         {nextDays.map((date) => {
             const isSelected = selectedDate && isSameDay(date, selectedDate);
             return (
               <button
                 key={date.toString()}
                 onClick={() => { setSelectedDate(date); setSelectedTime(null); }}
+                aria-pressed={!!isSelected}
                 className={`
-                  flex-shrink-0 w-[72px] h-24 flex flex-col items-center justify-center border-2 transition-all duration-300
+                  snap-start flex-shrink-0 w-[72px] sm:w-auto h-24 flex flex-col items-center justify-center border-2 transition-all duration-300
                   /* APLICAMOS CLASE HAND-DRAWN (Bordes orgánicos) */
                   hand-drawn
                   ${isSelected 
@@ -106,11 +107,12 @@ export default function BookingCalendar({ onDateTimeSelect, totalDuration }: Boo
               <p className="text-xs mt-1">Por favor selecciona otra fecha</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 xl:grid-cols-6">
               {availableTimes.map((time) => (
                 <button
                   key={time}
                   onClick={() => { setSelectedTime(time); onDateTimeSelect(selectedDate, time); }}
+                  aria-pressed={selectedTime === time}
                   className={`
                     py-3 text-sm font-bold transition-all duration-200 border-2 hand-drawn
                     ${selectedTime === time 

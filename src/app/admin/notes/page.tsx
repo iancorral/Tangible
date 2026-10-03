@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import { PrivacyToggle } from "@/components/privacy";
 import NoteCard from "@/components/notes/NoteCard";
@@ -175,7 +174,7 @@ export default function NotesPage() {
     });
 
   const renderGrid = (list: NoteDTO[]) => (
-    <div className="columns-2 md:columns-3 gap-3">
+    <div className="columns-2 md:columns-3 xl:columns-4 gap-3">
       {list.map((note) => (
         <NoteCard
           key={note.id}
@@ -202,18 +201,12 @@ export default function NotesPage() {
   const searching = term.trim().length > 0;
 
   return (
-    <main className="min-h-screen p-4 md:p-10 relative bg-salon-bg">
+    <main className="min-h-[100dvh] px-4 pt-6 pb-8 sm:px-6 lg:px-10 lg:pt-10 relative bg-salon-bg">
       <MuralDecorations />
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="max-w-6xl mx-auto relative z-10">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <Link
-              href="/admin"
-              className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block"
-            >
-              ← Volver al panel
-            </Link>
             <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
               Notas
             </h1>
@@ -228,7 +221,7 @@ export default function NotesPage() {
         </header>
 
         {/* Captura rápida */}
-        <div className="flex items-center gap-1 bg-white border-2 border-salon-honey/40 rounded-2xl shadow-sm mb-5 pr-2">
+        <div className="flex items-center gap-1 bg-white border-2 border-salon-pink/30 rounded-2xl shadow-sm mb-5 pr-2">
           <button
             type="button"
             onClick={() => setEditor({ mode: "new" })}
@@ -285,7 +278,7 @@ export default function NotesPage() {
         </div>
 
         {loading ? (
-          <div className="columns-2 md:columns-3 gap-3">
+          <div className="columns-2 md:columns-3 xl:columns-4 gap-3">
             {[120, 80, 160, 96, 140, 72].map((h, i) => (
               <div key={i} className="break-inside-avoid mb-3 rounded-2xl bg-white border-2 border-salon-gray/10 animate-pulse" style={{ height: h }} />
             ))}
@@ -370,14 +363,14 @@ export default function NotesPage() {
       {toast && (
         <div
           role="status"
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-salon-brown text-white rounded-2xl pl-5 pr-3 py-3 shadow-xl text-xs font-bold"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:left-auto lg:right-8 z-50 flex items-center gap-4 bg-salon-brown text-white rounded-2xl pl-5 pr-3 py-3 shadow-xl text-xs font-bold"
         >
           <span>{toast.message}</span>
           {toast.undo && (
             <button
               type="button"
               onClick={toast.undo}
-              className="px-3 py-1 rounded-lg text-salon-honey font-black uppercase tracking-wider hover:bg-white/10"
+              className="px-3 py-1 rounded-lg text-salon-blush font-black uppercase tracking-wider hover:bg-white/10"
             >
               Deshacer
             </button>

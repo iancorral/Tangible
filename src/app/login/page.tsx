@@ -83,7 +83,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-salon-brown text-salon-yellow py-4 px-6 font-black text-sm uppercase tracking-widest shadow-folk transform active:scale-[0.98] transition-all disabled:opacity-50 hand-drawn border-2 border-salon-brown hover:bg-salon-brown/90 rounded-xl"
+            className="w-full mt-2 bg-salon-brown text-salon-blush py-4 px-6 font-black text-sm uppercase tracking-widest shadow-folk transform active:scale-[0.98] transition-all disabled:opacity-50 hand-drawn border-2 border-salon-brown hover:bg-salon-brown/90 rounded-xl"
           >
             {loading ? "Entrando..." : "Entrar al panel"}
           </button>

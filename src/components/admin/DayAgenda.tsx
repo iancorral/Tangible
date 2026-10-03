@@ -51,7 +51,7 @@ const ADMIN_START = 6 * 60;   // 06:00
 const ADMIN_END = 22 * 60;    // 22:00
 
 const PAYMENT_META: Record<string, { label: string; classes: string }> = {
-  PENDING: { label: "Pendiente", classes: "bg-amber-50 border-amber-200 text-amber-800" },
+  PENDING: { label: "Pendiente", classes: "bg-salon-mustard-50 border-salon-mustard-200 text-salon-mustard-700" },
   PARTIAL: { label: "Anticipo",  classes: "bg-blue-50 border-blue-200 text-blue-800" },
   PAID:    { label: "Pagado",    classes: "bg-green-50 border-green-200 text-green-800" },
 };
@@ -205,7 +205,7 @@ export default function DayAgenda({
   return (
     <div className="p-2 space-y-1.5 max-h-[560px] overflow-y-auto">
       {isDayOff && (
-        <div className="bg-salon-yellow/15 border border-salon-yellow/40 rounded-xl px-3 py-2 text-[10px] text-salon-brown font-bold text-center mb-1">
+        <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-3 py-2 text-[10px] text-salon-brown font-bold text-center mb-1">
           Día cerrado al público — puedes agendar manualmente
         </div>
       )}

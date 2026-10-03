@@ -14,6 +14,7 @@ import {
 } from "@/lib/notes";
 import { chihuahuaDateKey } from "@/lib/timezone";
 import { createNote, deleteNote, newItemId, updateNote } from "./notesApi";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { ArchiveIcon, CalendarIcon, ChecklistIcon, LockIcon, PinIcon, TrashIcon, XIcon } from "./icons";
 
 const DEFAULT_START = "10:00";
@@ -183,14 +184,8 @@ export default function NoteEditor({
     return () => window.removeEventListener("keydown", onKey);
   }, [save, confirmDelete]);
 
-  // Evita que el fondo se desplace detrás del editor en el celular.
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  // Evita que el fondo se desplace detrás del editor (también en iOS).
+  useBodyScrollLock();
 
   useEffect(() => {
     if (!focusItemId) return;

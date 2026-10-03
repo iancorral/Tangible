@@ -55,14 +55,11 @@ export default function QRPage() {
   };
 
     return (
-      <main className="min-h-screen p-6 md:p-10 bg-salon-bg relative">
+      <main className="min-h-[100dvh] p-6 md:p-10 bg-salon-bg relative">
         <MuralDecorations />
         <div className="max-w-sm mx-auto relative z-10">
 
         <header className="mb-8">
-          <a href="/admin" className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block">
-            ← Volver al panel
-          </a>
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
             QR Code
           </h1>
@@ -102,7 +99,7 @@ export default function QRPage() {
         </div>
 
         {/* Instrucciones */}
-        <div className="bg-salon-honey/20 border-2 border-salon-honey rounded-2xl p-5 hand-drawn mb-6">
+        <div className="bg-salon-blush/30 border-2 border-salon-pink/60 rounded-2xl p-5 hand-drawn mb-6">
           <p className="text-xs font-black text-salon-brown uppercase tracking-wider mb-3">
             Cómo usarlo
           </p>
@@ -116,7 +113,7 @@ export default function QRPage() {
 
         <button
           onClick={downloadQR}
-          className="w-full py-4 bg-salon-brown text-salon-honey font-black text-xs uppercase tracking-widest rounded-xl hand-drawn border-2 border-salon-brown hover:bg-salon-brown/90 transition-all shadow-folk"
+          className="w-full py-4 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-xl hand-drawn border-2 border-salon-brown hover:bg-salon-brown/90 transition-all shadow-folk"
         >
           Descargar QR
         </button>
@@ -151,7 +148,7 @@ export default function QRPage() {
               </code>
               <button
                 onClick={() => copyTagUrl(REVIEW_TAG_URL)}
-                className="shrink-0 px-4 py-2.5 bg-salon-brown text-salon-honey rounded-xl text-[10px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97]"
+                className="shrink-0 px-4 py-2.5 bg-salon-brown text-salon-blush rounded-xl text-[10px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97]"
               >
                 {copiedUrl === REVIEW_TAG_URL ? "Copiado" : "Copiar"}
               </button>
@@ -168,7 +165,7 @@ export default function QRPage() {
           </div>
 
           {/* Sticker 2 — tarjeta de recompensas */}
-          <div className="bg-white rounded-2xl border-2 border-salon-honey/60 shadow-sm p-6">
+          <div className="bg-white rounded-2xl border-2 border-salon-pink/50 shadow-sm p-6">
             <p className="text-[10px] font-black text-salon-terracotta uppercase tracking-widest mb-1">
               Sticker 2
             </p>
@@ -189,7 +186,7 @@ export default function QRPage() {
               </code>
               <button
                 onClick={() => copyTagUrl(REWARDS_TAG_URL)}
-                className="shrink-0 px-4 py-2.5 bg-salon-brown text-salon-honey rounded-xl text-[10px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97]"
+                className="shrink-0 px-4 py-2.5 bg-salon-brown text-salon-blush rounded-xl text-[10px] font-black uppercase tracking-wider transition-transform hover:scale-[1.03] active:scale-[0.97]"
               >
                 {copiedUrl === REWARDS_TAG_URL ? "Copiado" : "Copiar"}
               </button>

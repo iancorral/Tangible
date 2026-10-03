@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
-import type { Prisma } from "@prisma/client";
+import { matchesClient } from "@/lib/search";
 
 /** Candidates pulled before ranking by last visit, so the top 8 are the real top 8. */
 const SEARCH_CANDIDATES = 40;
@@ -25,18 +25,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ clients: [] });
     }
 
-    const digits = term.replace(/\D/g, "");
-    const or: Prisma.CustomerWhereInput[] = [
-      { name: { contains: term, mode: "insensitive" } },
-    ];
-    if (digits.length >= 3) {
-      or.push({ phone: { contains: digits } });
-    }
-
-    const customers = await prisma.customer.findMany({
-      where: { OR: or },
-      take: SEARCH_CANDIDATES,
+    // Matched in memory so "Dania Pena" finds "Dania Peña" (see lib/search.ts).
+    const all = await prisma.customer.findMany({
+      select: { id: true, name: true, phone: true, createdAt: true },
     });
+    const customers = all.filter((c) => matchesClient(c, term)).slice(0, SEARCH_CANDIDATES);
 
     if (customers.length === 0) {
       return NextResponse.json({ clients: [] });

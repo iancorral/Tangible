@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Service = {
   id: string;
@@ -39,6 +40,7 @@ export default function EditAppointmentModal({
   onUpdated,
   onStatusChange,
 }: Props) {
+  useBodyScrollLock();
   const isCancelled = appointment.status === "CANCELLED";
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -90,16 +92,30 @@ export default function EditAppointmentModal({
       adminNotes: adminNotes || null,
     };
 
+    // Vacío = precio de catálogo (null); un número = precio acordado.
     const finalPriceNum = parseFloat(finalPrice);
-    if (finalPrice !== "" && !Number.isNaN(finalPriceNum)) {
+    if (finalPrice.trim() === "") {
+      payload.finalPrice = null;
+    } else if (!Number.isNaN(finalPriceNum) && finalPriceNum >= 0) {
       payload.finalPrice = finalPriceNum;
+    } else {
+      setError("El precio debe ser un número mayor o igual a 0.");
+      setSubmitting(false);
+      return;
     }
 
-    const res = await fetch(`/api/admin/appointments/${appointment.id}/edit`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/admin/appointments/${appointment.id}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      setError("No hay conexión. Revisa tu internet y vuelve a intentarlo.");
+      setSubmitting(false);
+      return;
+    }
 
     if (res.ok) {
       const updated = await res.json();
@@ -112,8 +128,9 @@ export default function EditAppointmentModal({
       });
       onClose();
     } else {
-      const data = await res.json().catch(() => ({}));
-      setError((data as { error?: string }).error ?? "Error al guardar los cambios.");
+      const data: { error?: string; fields?: Record<string, string> } =
+        await res.json().catch(() => ({}));
+      setError(Object.values(data.fields ?? {}).join(" · ") || data.error || "Error al guardar los cambios.");
     }
 
     setSubmitting(false);
@@ -123,11 +140,18 @@ export default function EditAppointmentModal({
     setStatusBusy(true);
     setError("");
 
-    const res = await fetch(`/api/appointments/${appointment.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch {
+      setError("No hay conexión. Revisa tu internet y vuelve a intentarlo.");
+      setStatusBusy(false);
+      return;
+    }
 
     if (res.ok) {
       onStatusChange(status);
@@ -358,7 +382,7 @@ export default function EditAppointmentModal({
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="bg-salon-yellow/20 rounded-xl p-3 border border-salon-yellow/50 flex justify-between">
+                <div className="bg-salon-blush/25 rounded-xl p-3 border border-salon-pink/30 flex justify-between">
                   <span className="text-xs font-bold text-salon-brown">
                     {selectedServices.length} servicio(s) · {totalDuration} min
                   </span>
@@ -382,7 +406,7 @@ export default function EditAppointmentModal({
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || selectedServiceIds.length === 0}
-                  className="flex-1 py-3 bg-salon-brown text-salon-yellow font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
+                  className="flex-1 py-3 bg-salon-brown text-salon-blush font-black text-xs uppercase tracking-widest rounded-2xl disabled:opacity-40 hover:bg-salon-brown/90 transition-all"
                 >
                   {submitting ? "Guardando..." : "Guardar cambios"}
                 </button>

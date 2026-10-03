@@ -9,43 +9,60 @@ interface ServiceCardProps {
   isSelected: boolean;
 }
 
+/**
+ * Un servicio elegible. Es un <button> con aria-pressed (no un div con onClick)
+ * para que funcione con teclado y lectores de pantalla, y muestra una palomita
+ * clara: en el celular no hay hover que indique qué ya está elegido.
+ */
 export function ServiceCardItem({ service, onSelect, isSelected }: ServiceCardProps) {
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onSelect(service)}
-      className="rounded-xl p-4 cursor-pointer h-full"
+      aria-pressed={isSelected}
+      className={`group flex h-full w-full items-start gap-3 rounded-2xl border-2 bg-white p-4 text-left transition-all active:scale-[0.99] ${
+        isSelected
+          ? "border-salon-lavender shadow-folk-purple"
+          : "border-salon-olive/25 shadow-sm hover:border-salon-olive/60 hover:shadow-md"
+      }`}
     >
-      <div className="flex justify-between items-start">
-        <div className="pr-4">
-          <h3 className={`font-black text-base tracking-wide uppercase leading-tight ${isSelected ? 'text-salon-terracotta' : 'text-salon-brown'}`}>
-            {service.name}
-          </h3>
-          {service.description && (
-            <p className="text-salon-gray text-xs mt-1 leading-relaxed font-medium">
-              {service.description}
-            </p>
-          )}
-        </div>
-        <div className="text-right flex flex-col items-end shrink-0">
-          <span className={`font-black text-xl ${isSelected ? 'text-salon-lavender' : 'text-salon-brown'}`}>
-            ${service.price}
-          </span>
-          <span className="text-[10px] text-salon-brown mt-1 font-bold bg-salon-yellow/50 px-2 py-1 rounded-sm uppercase tracking-wider">
-            {service.duration} min
-          </span>
-        </div>
-      </div>
-    </div>
+      <span
+        aria-hidden="true"
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+          isSelected ? "border-salon-lavender bg-salon-lavender text-white" : "border-salon-gray/30 bg-white"
+        }`}
+      >
+        {isSelected && (
+          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M2.5 6.5 5 9l4.5-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className={`block font-black uppercase leading-tight tracking-wide text-[15px] ${isSelected ? "text-salon-lavender" : "text-salon-brown"}`}>
+          {service.name}
+        </span>
+        {service.description && (
+          <span className="mt-1 block text-xs font-medium leading-relaxed text-salon-gray">{service.description}</span>
+        )}
+        <span className="mt-2 inline-block rounded-md bg-salon-blush/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-salon-brown">
+          {service.duration} min
+        </span>
+      </span>
+
+      <span className="shrink-0 text-lg font-black text-salon-brown tabular-nums">${service.price}</span>
+    </button>
   );
 }
 
 const CATEGORY_COLORS: Record<string, { border: string; bg: string; text: string; dot: string }> = {
-  'Uñas':                { border: 'border-salon-lavender', bg: 'bg-salon-lavender/10', text: 'text-salon-lavender', dot: 'bg-salon-lavender' },
-  'Extras':              { border: 'border-salon-yellow',   bg: 'bg-salon-yellow/20',   text: 'text-salon-brown',   dot: 'bg-salon-yellow' },
+  'Uñas':                { border: 'border-salon-lavender',   bg: 'bg-salon-lavender/10',   text: 'text-salon-lavender',   dot: 'bg-salon-lavender' },
+  'Extras':              { border: 'border-salon-pink/60',      bg: 'bg-salon-blush/25',      text: 'text-salon-brown',      dot: 'bg-salon-blush' },
   'Manicura y Pedicura': { border: 'border-salon-terracotta', bg: 'bg-salon-terracotta/10', text: 'text-salon-terracotta', dot: 'bg-salon-terracotta' },
-  'Maquillaje y Peinado':{ border: 'border-salon-olive',    bg: 'bg-salon-olive/10',    text: 'text-salon-olive',   dot: 'bg-salon-olive' },
-  'Cejas':               { border: 'border-salon-brown',    bg: 'bg-salon-brown/10',    text: 'text-salon-brown',   dot: 'bg-salon-brown' },
-  'General':             { border: 'border-salon-gray/30',  bg: 'bg-salon-bg',          text: 'text-salon-gray',    dot: 'bg-salon-gray' },
+  'Maquillaje y Peinado':{ border: 'border-salon-olive',      bg: 'bg-salon-olive/10',      text: 'text-salon-olive',      dot: 'bg-salon-olive' },
+  'Cejas':               { border: 'border-salon-brown',      bg: 'bg-salon-brown/10',      text: 'text-salon-brown',      dot: 'bg-salon-brown' },
+  'General':             { border: 'border-salon-gray/30',    bg: 'bg-salon-bg',            text: 'text-salon-gray',       dot: 'bg-salon-gray' },
 };
 
 interface CategoryAccordionProps {
@@ -59,61 +76,47 @@ export function CategoryAccordion({ category, services, selectedServices, onSele
   const [open, setOpen] = useState(false);
   const colors = CATEGORY_COLORS[category] ?? CATEGORY_COLORS['General'];
   const selectedCount = services.filter(s => selectedServices.some(sel => sel.id === s.id)).length;
+  const panelId = `categoria-${category.replace(/\W+/g, '-').toLowerCase()}`;
 
   return (
-    <div className={`border-2 ${colors.border} rounded-2xl overflow-hidden transition-all duration-300 bg-white shadow-folk`}>
-
+    <div className={`overflow-hidden rounded-2xl border-2 ${colors.border} bg-white shadow-folk transition-all duration-300`}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-5 py-4 ${open ? colors.bg : 'bg-white'} transition-all`}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className={`flex w-full items-center justify-between px-5 py-4 transition-colors ${open ? colors.bg : 'bg-white'}`}
       >
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${colors.dot}`} />
-          <span className={`font-black uppercase tracking-wider text-sm ${colors.text}`}>
-            {category}
-          </span>
-          <span className="text-[10px] text-salon-gray font-bold">
-            ({services.length})
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+        <span className="flex items-center gap-3">
+          <span className={`h-3 w-3 rounded-full ${colors.dot}`} aria-hidden="true" />
+          <span className={`text-sm font-black uppercase tracking-wider ${colors.text}`}>{category}</span>
+          <span className="text-[10px] font-bold text-salon-gray">({services.length})</span>
+        </span>
+        <span className="flex items-center gap-2">
           {selectedCount > 0 && (
-            <span className="text-[10px] font-black text-white bg-salon-lavender px-2 py-0.5 rounded-full">
-              {selectedCount} sel.
+            <span className="rounded-full bg-salon-lavender px-2 py-0.5 text-[10px] font-black text-white">
+              {selectedCount} {selectedCount === 1 ? 'elegido' : 'elegidos'}
             </span>
           )}
           <svg
-            className={`w-4 h-4 text-salon-gray transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            className={`h-4 w-4 text-salon-gray transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
           </svg>
-        </div>
+        </span>
       </button>
 
       {open && (
-        <div className="p-3 space-y-3 bg-salon-bg/30">
-          {services.map((service) => {
-            const isSelected = selectedServices.some(s => s.id === service.id);
-            return (
-              <div
-                key={service.id}
-                className={`
-                  p-1 transition-all duration-300 bg-white card-hover border-2 rounded-xl
-                  ${isSelected 
-                    ? 'shadow-folk-purple border-salon-lavender' 
-                    : 'shadow-folk border-salon-olive/50 hover:border-salon-olive'
-                  }
-                `}
-              >
-                <ServiceCardItem
-                  service={service}
-                  onSelect={onSelect}
-                  isSelected={isSelected}
-                />
-              </div>
-            );
-          })}
+        <div id={panelId} className="grid gap-3 bg-salon-bg/30 p-3 sm:grid-cols-2">
+          {services.map((service) => (
+            <ServiceCardItem
+              key={service.id}
+              service={service}
+              onSelect={onSelect}
+              isSelected={selectedServices.some(s => s.id === service.id)}
+            />
+          ))}
         </div>
       )}
     </div>

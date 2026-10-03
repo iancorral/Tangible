@@ -38,6 +38,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   // El usuario puede hacer zoom (accesibilidad); no lo bloqueamos.
   maximumScale: 5,
+  // Permite usar env(safe-area-inset-*) para no quedar bajo la barra de
+  // inicio del iPhone (ver .pb-safe en globals.css).
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

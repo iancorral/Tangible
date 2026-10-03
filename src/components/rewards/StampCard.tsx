@@ -178,7 +178,7 @@ export default function StampCard({ stamps, required, track = true }: Props) {
               aria-hidden="true"
               className={`aspect-square rounded-full grid place-items-center border-2 ${
                 isFilled
-                  ? "bg-salon-brown border-salon-brown text-salon-yellow"
+                  ? "bg-salon-brown border-salon-brown text-salon-blush"
                   : isNext
                     ? "border-dashed border-salon-terracotta text-salon-terracotta/60"
                     : "border-dashed border-salon-olive/35 text-salon-olive/30"

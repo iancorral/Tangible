@@ -28,7 +28,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
         return;
       }
 
-      const safeName = parsed.name?.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g, "").trim();
+      const safeName = parsed.name?.replace(/[^\p{L}\p{M}\s.'\-]/gu, "").trim();
       const safePhone = parsed.phone?.replace(/[^0-9+]/g, "").trim();
 
       if (safeName && safePhone) {
@@ -70,7 +70,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
       
       {isReturningUser ? (
         <div className="text-center">
-          <div className="w-16 h-16 bg-salon-yellow rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-salon-brown shadow-folk">
+          <div className="w-16 h-16 bg-salon-blush rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-salon-brown shadow-folk">
             <svg className="w-8 h-8 text-salon-brown" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -79,7 +79,7 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
           <p className="text-xs text-salon-gray mb-6 font-medium">
             Usaremos el número <span className="font-bold text-salon-terracotta">...{phone.slice(-4)}</span>
           </p>
-          <div className="bg-salon-yellow/20 border border-salon-yellow/50 rounded-xl px-4 py-3 mb-2">
+          <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-4 py-3 mb-2">
             <p className="text-[10px] text-salon-gray leading-relaxed text-center">
               Se requiere depósito de{" "}
               <span className="font-black text-salon-terracotta">$150 MXN</span>{" "}
@@ -131,6 +131,9 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
             <input
               type="text"
               required
+              autoComplete="name"
+              autoCapitalize="words"
+              enterKeyHint="next"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej. María Pérez"
@@ -145,15 +148,18 @@ export default function ClientForm({ onSubmit, isSubmitting, onGoBack }: ClientF
             <input
               type="tel"
               required
+              inputMode="tel"
+              autoComplete="tel-national"
+              enterKeyHint="done"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="Ej. 664 123 4567"
+              placeholder="Ej. 614 123 4567"
               className="w-full bg-white border-2 border-salon-gray/30 px-4 py-3 text-salon-brown focus:border-salon-lavender focus:ring-0 outline-none transition-all hand-drawn placeholder:text-salon-gray/40 font-medium"
             />
           </div>
 
 
-          <div className="bg-salon-yellow/20 border border-salon-yellow/50 rounded-xl px-4 py-3 mb-2">
+          <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-4 py-3 mb-2">
             <p className="text-[10px] text-salon-gray leading-relaxed text-center">
               Se requiere depósito de{" "}
               <span className="font-black text-salon-terracotta">$150 MXN</span>{" "}
