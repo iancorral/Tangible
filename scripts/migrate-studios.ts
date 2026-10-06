@@ -84,7 +84,7 @@ async function main() {
   console.log("\nDocumentos sin estudio (pasarían a Tangible):");
   for (const collection of SCOPED_COLLECTIONS) {
     const missing = await countMissing(collection);
-    console.log(`  ${collection.padEnd(22)} ${missing}`);
+    console.log(`  ${collection.padEnd(22)} ${missing}${APPLY && missing ? " → Tangible" : ""}`);
     if (APPLY && missing > 0) {
       await prisma.$runCommandRaw({
         update: collection,
@@ -118,7 +118,7 @@ async function main() {
     const ilovemeServices = await prisma.service.count({ where: { studioId: ids.iloveme } });
     const tangibleServices = await prisma.service.findMany({ where: { studioId: ids.tangible } });
     if (ilovemeServices === 0) {
-      console.log(`\nCatálogo iLoveMe: se copiarían ${tangibleServices.length} servicios de Tangible`);
+      console.log(`\nCatálogo iLoveMe: ${APPLY ? "copiados" : "se copiarían"} ${tangibleServices.length} servicios de Tangible`);
       if (APPLY && tangibleServices.length) {
         await prisma.service.createMany({
           data: tangibleServices.map((s) => ({
@@ -140,7 +140,7 @@ async function main() {
     const ilovemeSchedule = await prisma.workSchedule.count({ where: { studioId: ids.iloveme } });
     const tangibleSchedule = await prisma.workSchedule.findMany({ where: { studioId: ids.tangible } });
     if (ilovemeSchedule === 0 && tangibleSchedule.length) {
-      console.log(`Horario iLoveMe: se copiarían ${tangibleSchedule.length} días de Tangible`);
+      console.log(`Horario iLoveMe: ${APPLY ? "copiados" : "se copiarían"} ${tangibleSchedule.length} días de Tangible`);
       if (APPLY) {
         await prisma.workSchedule.createMany({
           data: tangibleSchedule.map(({ dayOfWeek, startTime, endTime, isDayOff }) => ({
