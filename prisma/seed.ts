@@ -2,14 +2,14 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  console.log('Seeding servicios...')
-
-  await prisma.appointment.deleteMany()
-  await prisma.service.deleteMany()
-
-  await prisma.service.createMany({
-    data: [
+/**
+ * Catálogo inicial de Tangible para una base de datos VACÍA.
+ *
+ * Nunca borra nada: antes eliminaba todas las citas y servicios, y como el
+ * .env apunta a producción, un `npx prisma db seed` habría borrado la agenda
+ * real. Ahora solo crea el estudio si no existe y su catálogo si está vacío.
+ */
+const SERVICES = [
       // UÑAS
       { name: 'Uñas de tip acrílico o polygel', duration: 120, price: 550, category: 'Uñas', isActive: true },
       { name: 'Uñas esculturales', duration: 120, price: 600, category: 'Uñas', isActive: true },
@@ -40,10 +40,31 @@ async function main() {
       // CEJAS
       { name: 'Laminado de cejas', duration: 45, price: 200, category: 'Cejas', isActive: true },
       { name: 'Laminado + depilación', duration: 60, price: 350, category: 'Cejas', isActive: true },
-    ]
+]
+
+async function main() {
+  const studio = await prisma.studio.upsert({
+    where: { slug: 'tangible' },
+    update: {},
+    create: {
+      slug: 'tangible',
+      name: 'Tangible Nails & Art Studio',
+      shortName: 'Tangible',
+      logoPath: null,
+      features: { rewards: true, publicBooking: true },
+    },
   })
 
-  console.log('Servicios creados.')
+  const existing = await prisma.service.count({ where: { studioId: studio.id } })
+  if (existing > 0) {
+    console.log(`Tangible ya tiene ${existing} servicios; no se crea nada.`)
+    return
+  }
+
+  await prisma.service.createMany({
+    data: SERVICES.map((service) => ({ ...service, studioId: studio.id })),
+  })
+  console.log(`${SERVICES.length} servicios creados para Tangible.`)
 }
 
 main()

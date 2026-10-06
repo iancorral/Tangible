@@ -16,6 +16,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { normalizePhone } from "../src/lib/phone";
+import { resolveStudioArg } from "./lib/studio";
 
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes("--apply");
@@ -39,7 +40,10 @@ type Group = {
 async function main() {
   console.log(APPLY ? "APPLY — writing changes\n" : "DRY RUN — nothing will be written\n");
 
+  const { id: studioId } = await resolveStudioArg(prisma);
+
   const appointments = await prisma.appointment.findMany({
+    where: { studioId },
     select: {
       id: true,
       clientName: true,
@@ -164,13 +168,13 @@ async function main() {
     // Clientas screen, and re-running this to repair links must not undo an edit
     // the owner made there. Same rule as lib/customers.ts.
     const existing = await prisma.customer.findUnique({
-      where: { phone: group.phone },
+      where: { studioId_phone: { studioId, phone: group.phone } },
       select: { id: true },
     });
 
     const customer =
       existing ??
-      (await prisma.customer.create({ data: { phone: group.phone, name: group.name } }));
+      (await prisma.customer.create({ data: { studioId, phone: group.phone, name: group.name } }));
     if (!existing) customersWritten++;
 
     // Only touch appointments that are not linked yet, so re-running never
@@ -183,6 +187,7 @@ async function main() {
     // explicit null. Filtering on either one alone misses half the collection.
     const linked = await prisma.appointment.updateMany({
       where: {
+        studioId,
         id: { in: group.appointmentIds },
         OR: [{ customerId: null }, { customerId: { isSet: false } }],
       },

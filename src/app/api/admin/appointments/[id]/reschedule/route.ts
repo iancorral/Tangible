@@ -1,7 +1,7 @@
+import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { addMinutes } from "date-fns";
 import { z } from "zod";
 
@@ -13,10 +13,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!id || !/^[a-f\d]{24}$/i.test(id)) {
@@ -32,7 +31,7 @@ export async function PATCH(
 
     // Traer la cita con sus servicios para recalcular endDate
     const existing = await prisma.appointment.findUnique({
-      where: { id },
+      where: { id, studioId },
       include: { services: true },
     });
 
@@ -45,13 +44,16 @@ export async function PATCH(
     const newEnd   = addMinutes(newStart, totalDuration);
 
     const updated = await prisma.appointment.update({
-      where: { id },
+      where: { id, studioId },
       data: { date: newStart, endDate: newEnd },
       include: { services: true },
     });
 
     return NextResponse.json(updated);
-  } catch {
+  } catch (error) {
+    if (isNotFound(error)) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

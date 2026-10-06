@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { hasFeature, requireStudio } from "@/lib/tenant";
 import { maskPhone } from "@/lib/phone";
 import { UNSPENT_STAMP } from "@/lib/rewards";
 import { getRewardProgram } from "@/lib/rewards.server";
@@ -10,9 +9,11 @@ import type { Prisma } from "@prisma/client";
 const MAX_CUSTOMERS = 300;
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   const term = (new URL(req.url).searchParams.get("q") ?? "").trim();
@@ -27,9 +28,9 @@ export async function GET(req: Request) {
   }
 
   const [program, customers, unspent] = await Promise.all([
-    getRewardProgram(),
+    getRewardProgram(studioId),
     prisma.customer.findMany({
-      where,
+      where: { studioId, ...where },
       take: MAX_CUSTOMERS,
       select: { id: true, name: true, phone: true },
     }),
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
     // figure that shrinks as you type would be worse than useless.
     prisma.stamp.groupBy({
       by: ["customerId"],
-      where: UNSPENT_STAMP,
+      where: { studioId, ...UNSPENT_STAMP },
       _count: { _all: true },
     }),
   ]);

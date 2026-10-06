@@ -1,7 +1,7 @@
+import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { z } from "zod";
 
 const OBJECT_ID = /^[a-f\d]{24}$/i;
@@ -30,10 +30,9 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!OBJECT_ID.test(id)) {
@@ -55,8 +54,9 @@ export async function POST(
     }
 
     const [target, source] = await Promise.all([
-      prisma.customer.findUnique({ where: { id } }),
-      prisma.customer.findUnique({ where: { id: sourceId } }),
+      // Ambas deben ser de este estudio: no se fusionan clientas entre estudios.
+      prisma.customer.findUnique({ where: { id, studioId } }),
+      prisma.customer.findUnique({ where: { id: sourceId, studioId } }),
     ]);
 
     if (!target || !source) {
@@ -71,15 +71,15 @@ export async function POST(
     //    be the one to notice.
     const [moved, stampsMoved] = await Promise.all([
       prisma.appointment.updateMany({
-        where: { customerId: sourceId },
+        where: { studioId, customerId: sourceId },
         data: { customerId: id },
       }),
       prisma.stamp.updateMany({
-        where: { customerId: sourceId },
+        where: { studioId, customerId: sourceId },
         data: { customerId: id },
       }),
       prisma.redemption.updateMany({
-        where: { customerId: sourceId },
+        where: { studioId, customerId: sourceId },
         data: { customerId: id },
       }),
     ]);
@@ -93,10 +93,10 @@ export async function POST(
 
     // 3. Free the phone, then take it. Between these two writes the number
     //    belongs to nobody, so the worst case is the owner repeating the edit.
-    await prisma.customer.delete({ where: { id: sourceId } });
+    await prisma.customer.delete({ where: { id: sourceId, studioId } });
 
     const merged = await prisma.customer.update({
-      where: { id },
+      where: { id, studioId },
       data: { phone: source.phone, notes: notes || null },
     });
 
@@ -106,6 +106,9 @@ export async function POST(
       stampsMoved: stampsMoved.count,
     });
   } catch (error) {
+    if (isNotFound(error)) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
     console.error(error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }

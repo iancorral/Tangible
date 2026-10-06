@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { hasFeature, requireStudio } from "@/lib/tenant";
 import { issueClaimCode } from "@/lib/rewards.server";
 import { z } from "zod";
 
@@ -14,9 +13,11 @@ const schema = z.object({
  * once, for the owner to read out; only its hash is stored.
  */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   try {
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     }
 
     const customer = await prisma.customer.findUnique({
-      where: { id: validation.data.customerId },
+      where: { id: validation.data.customerId, studioId },
       select: { id: true },
     });
     if (!customer) {
@@ -44,8 +45,9 @@ export async function POST(req: Request) {
     }
 
     const { code, expiresAt } = await issueClaimCode(
+      studioId,
       customer.id,
-      session.user?.email ?? "admin"
+      ctx.email
     );
 
     return NextResponse.json({ code, expiresAt });

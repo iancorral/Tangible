@@ -14,6 +14,7 @@ import { chihuahuaToUTC } from "./timezone";
 
 // Un día futuro fijo para que "la fecha ya pasó" no interfiera.
 const at = (h: number, m = 0) => chihuahuaToUTC(2030, 3, 12, h, m);
+const STUDIO = "6a0000000000000000000aaa";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,31 +40,34 @@ describe("getPublicBusyIntervals", () => {
     prismaMock.appointment.findMany.mockResolvedValue([{ date: at(10), endDate: at(11) }]);
     prismaMock.note.findMany.mockResolvedValue([{ startAt: at(15), endAt: at(16) }]);
 
-    const busy = await getPublicBusyIntervals(at(0), at(24));
+    const busy = await getPublicBusyIntervals(STUDIO, at(0), at(24));
 
     expect(busy).toEqual([
       { start: at(10).getTime(), end: at(11, 30).getTime() },
       { start: at(15).getTime(), end: at(16).getTime() },
     ]);
     expect(prismaMock.note.findMany.mock.calls[0][0].where.blocksSchedule).toBe(true);
+    // Solo mira citas y notas de ESTE estudio.
+    expect(prismaMock.appointment.findMany.mock.calls[0][0].where.studioId).toBe(STUDIO);
+    expect(prismaMock.note.findMany.mock.calls[0][0].where.studioId).toBe(STUDIO);
   });
 });
 
 describe("isSlotBookable", () => {
   it("una nota que aparta horario bloquea la reserva pública", async () => {
     prismaMock.note.findMany.mockResolvedValue([{ startAt: at(15), endAt: at(16) }]);
-    expect(await isSlotBookable(at(15, 30), 60)).toEqual({ ok: false, reason: "Ese horario ya no está disponible" });
-    expect(await isSlotBookable(at(16), 60)).toEqual({ ok: true });
+    expect(await isSlotBookable(STUDIO, at(15, 30), 60)).toEqual({ ok: false, reason: "Ese horario ya no está disponible" });
+    expect(await isSlotBookable(STUDIO, at(16), 60)).toEqual({ ok: true });
   });
 
   it("respeta el margen después de una cita", async () => {
     prismaMock.appointment.findMany.mockResolvedValue([{ date: at(10), endDate: at(11) }]);
-    expect((await isSlotBookable(at(11), 60)).ok).toBe(false);
-    expect((await isSlotBookable(at(11, 30), 60)).ok).toBe(true);
+    expect((await isSlotBookable(STUDIO, at(11), 60)).ok).toBe(false);
+    expect((await isSlotBookable(STUDIO, at(11, 30), 60)).ok).toBe(true);
   });
 
   it("rechaza fuera del horario de atención y fechas pasadas", async () => {
-    expect((await isSlotBookable(at(18, 30), 60)).ok).toBe(false);
-    expect((await isSlotBookable(new Date(Date.now() - 60_000), 60)).ok).toBe(false);
+    expect((await isSlotBookable(STUDIO, at(18, 30), 60)).ok).toBe(false);
+    expect((await isSlotBookable(STUDIO, new Date(Date.now() - 60_000), 60)).ok).toBe(false);
   });
 });

@@ -7,16 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Un negocio que usa el panel (Tangible, iLoveMe…). Todo dato de negocio cuelga
+// de un estudio por `studioId`, y cada cuenta solo ve lo de su estudio: lib/tenant.ts
+// es el único lugar donde se resuelve cuál es.
+model Studio {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  // Identificador estable y carpeta de su marca: public/studios/<slug>/.
+  slug      String         @unique
+  // Nombre completo ("iLoveMe Beauty Salon"): mensajes de WhatsApp, títulos.
+  name      String
+  // Nombre corto ("iLoveMe"): ícono de la app instalada en el celular.
+  shortName String
+  // Ruta del logo dentro de /public, o null para usar el wordmark de texto.
+  logoPath  String?
+  features  StudioFeatures
+  createdAt DateTime       @default(now())
+}
+
+// Qué partes del panel tiene encendidas cada estudio.
+type StudioFeatures {
+  // Programa de sellos, tarjeta y QR.
+  rewards       Boolean @default(false)
+  // Página pública de reservas (solo un estudio puede tenerla: ver PUBLIC_STUDIO_SLUG).
+  publicBooking Boolean @default(false)
+}
+
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId  String   @db.ObjectId
   email     String   @unique
   password  String
   name      String
   createdAt DateTime @default(now())
+
+  @@index([studioId])
 }
 
 model Service {
   id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId       String        @db.ObjectId
   name           String
   duration       Int
   price          Float
@@ -25,6 +56,8 @@ model Service {
   isActive       Boolean       @default(true)
   appointmentIDs String[]      @db.ObjectId
   appointments   Appointment[] @relation(fields: [appointmentIDs], references: [id])
+
+  @@index([studioId])
 }
 
 // A client as an entity, identified by phone number. Before this model a client
@@ -36,8 +69,12 @@ model Service {
 // of what was agreed on that day and must not change when a client is renamed.
 model Customer {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId     String        @db.ObjectId
   // Digits only, national format. See lib/phone.ts — every write goes through it.
-  phone        String        @unique
+  // Único dentro del estudio: una clienta que va con Tania y con Alejandra
+  // tiene un registro en cada una.
+  phone        String
   // Owner-controlled. Seeded from the first appointment and only ever changed
   // from the Clientas screen, so a later booking with a typo cannot undo an edit.
   name         String
@@ -52,6 +89,7 @@ model Customer {
   redemptions  Redemption[]
   claimCodes   ClaimCode[]
 
+  @@unique([studioId, phone])
   @@index([name])
 }
 
@@ -61,12 +99,14 @@ model Customer {
 // anything the client does. A stolen code buys nothing but the ability to see
 // one person's stamp count on your own device.
 model ClaimCode {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId   String   @db.ObjectId
   // SHA-256 of the code. The plaintext exists in one HTTP response and nowhere
   // else — not in this row, not in a log. A database dump yields no live codes.
-  codeHash   String    @unique
-  customerId String    @db.ObjectId
-  customer   Customer  @relation(fields: [customerId], references: [id])
+  codeHash   String   @unique
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
 
   expiresAt  DateTime
   consumedAt DateTime?
@@ -75,6 +115,7 @@ model ClaimCode {
   createdAt  DateTime  @default(now())
 
   @@index([customerId, consumedAt])
+  @@index([studioId])
 }
 
 // Fixed-window request counter for the public claim endpoint, keyed by hashed
@@ -90,34 +131,37 @@ model ClaimAttempt {
   @@index([windowStart])
 }
 
-// Loyalty program settings. A single document, pinned by `key`, so the config
-// can be edited without a deploy and every reward snapshot can point at it.
+// Loyalty program settings, one document per studio, so the config can be
+// edited without a deploy and every reward snapshot can point at it.
 model RewardProgram {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  key             String   @unique @default("default")
-  isActive        Boolean  @default(false)
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  // Un programa por estudio (antes: un documento fijo con key "default").
+  studioId String  @unique @db.ObjectId
+  isActive Boolean @default(false)
 
-  stampsRequired  Int      @default(5)
+  stampsRequired Int @default(5)
 
   // PERCENT_DISCOUNT | FIXED_AMOUNT | FREE_SERVICE
-  rewardType      String   @default("PERCENT_DISCOUNT")
-  rewardValue     Float    @default(50)
+  rewardType     String  @default("PERCENT_DISCOUNT")
+  rewardValue    Float   @default(50)
   // Caps what the reward can be worth. Without it, "50% off" on a $1,700 bridal
   // service costs far more than five express manicures brought in.
-  maxRewardValue  Float?   @default(600)
+  maxRewardValue Float?  @default(600)
   // What the client reads. Snapshotted into every Redemption.
-  rewardLabel     String   @default("50% en tu próximo servicio")
-  termsNote       String?
+  rewardLabel    String  @default("50% en tu próximo servicio")
+  termsNote      String?
 
-  updatedAt       DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 // The stamp ledger. A balance is never stored: it is the count of this
 // collection's unspent rows, so it cannot drift away from its own history.
 model Stamp {
-  id            String      @id @default(auto()) @map("_id") @db.ObjectId
-  customerId    String      @db.ObjectId
-  customer      Customer    @relation(fields: [customerId], references: [id])
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId   String   @db.ObjectId
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
 
   // The anti-duplicate control: "appt:<appointmentId>" for an earned stamp,
   // "manual:<uuid>" for an owner adjustment. Always present and unique, so a
@@ -127,36 +171,39 @@ model Stamp {
   // MongoDB a plain unique index treats an absent field as null, which would
   // permit exactly one manual stamp in the whole collection. Prisma's MongoDB
   // connector cannot express the partial index that would otherwise fix this.
-  dedupeKey     String      @unique
+  dedupeKey String @unique
 
   // APPOINTMENT | MANUAL
   source        String
-  appointmentId String?     @db.ObjectId
-  earnedAt      DateTime    @default(now())
+  appointmentId String?  @db.ObjectId
+  earnedAt      DateTime @default(now())
 
   // Set when the stamp is spent. Always written explicitly, never left absent.
-  redemptionId  String?     @db.ObjectId
-  redemption    Redemption? @relation(fields: [redemptionId], references: [id])
+  redemptionId String?     @db.ObjectId
+  redemption   Redemption? @relation(fields: [redemptionId], references: [id])
 
-  note          String?
-  createdBy     String
+  note      String?
+  createdBy String
 
   @@index([customerId, redemptionId])
+  @@index([studioId])
 }
 
 // A reward that was handed over. Values are snapshotted so changing the program
 // later never rewrites what a client was actually given.
 model Redemption {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  customerId     String   @db.ObjectId
-  customer       Customer @relation(fields: [customerId], references: [id])
-  appointmentId  String?  @db.ObjectId
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId      String   @db.ObjectId
+  customerId    String   @db.ObjectId
+  customer      Customer @relation(fields: [customerId], references: [id])
+  appointmentId String?  @db.ObjectId
 
   // "appt:<appointmentId>" when applied at checkout, "manual:<uuid>" otherwise.
   // Same composite-key trick as Stamp.dedupeKey, and for the same reason: it
   // makes "one reward per appointment" a database guarantee, so a double tap on
   // Canjear cannot discount the same bill twice.
-  dedupeKey      String   @unique
+  dedupeKey String @unique
 
   stampsUsed     Int
   rewardLabel    String
@@ -166,69 +213,83 @@ model Redemption {
   // Pesos actually discounted. Null until applied to an appointment.
   amountApplied  Float?
 
-  stamps         Stamp[]
-  redeemedAt     DateTime @default(now())
-  createdBy      String
+  stamps     Stamp[]
+  redeemedAt DateTime @default(now())
+  createdBy  String
 
   @@index([customerId, redeemedAt])
+  @@index([studioId])
 }
 
 model Appointment {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt      DateTime  @default(now())
-  date           DateTime
-  endDate        DateTime
-  clientName     String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId    String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  date        DateTime
+  endDate     DateTime
+  clientName  String
   // Opcional: una cita de mostrador o de menor de edad puede no tener teléfono.
   // Cuando es null, las funciones de WhatsApp se deshabilitan para esa cita.
-  clientPhone    String?
-  status         String    @default("CONFIRMED")
+  clientPhone String?
+  status      String   @default("CONFIRMED")
 
   // Pago
-  paymentStatus  String    @default("PENDING")   // PENDING | PAID | PARTIAL
-  paymentMethod  String?                          // CASH | CARD | TRANSFER
-  depositPaid    Boolean   @default(false)
-  depositAmount  Float?
+  paymentStatus String  @default("PENDING") // PENDING | PAID | PARTIAL
+  paymentMethod String? // CASH | CARD | TRANSFER
+  depositPaid   Boolean @default(false)
+  depositAmount Float?
 
   // Precio real (override del catálogo)
-  finalPrice     Float?
+  finalPrice Float?
 
   // Notas internas (solo ve el admin)
-  adminNotes     String?
+  adminNotes String?
 
   // Distinguir si la creó el admin o vino de la web
-  createdByAdmin Boolean   @default(false)
+  createdByAdmin Boolean @default(false)
 
   // Null when the appointment has no usable phone (walk-ins, minors). Those
   // clients cannot be identified, so they have no customer record.
-  customerId     String?   @db.ObjectId
-  customer       Customer? @relation(fields: [customerId], references: [id])
+  customerId String?   @db.ObjectId
+  customer   Customer? @relation(fields: [customerId], references: [id])
 
-  serviceIDs     String[]  @db.ObjectId
-  services       Service[] @relation(fields: [serviceIDs], references: [id])
+  serviceIDs String[]  @db.ObjectId
+  services   Service[] @relation(fields: [serviceIDs], references: [id])
 
   @@index([customerId])
+  @@index([studioId])
 }
 
 model WorkSchedule {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId  String  @db.ObjectId
   dayOfWeek Int
   startTime String
   endTime   String
-  isDayOff  Boolean  @default(false)
+  isDayOff  Boolean @default(false)
+
+  @@index([studioId])
 }
 
 model BlockedDate {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId  String   @db.ObjectId
   date      DateTime
   reason    String?
   createdAt DateTime @default(now())
+
+  @@index([studioId])
 }
 
 // Registro de recordatorios enviados (bitácora). El mensaje/URL se genera en
 // vivo desde los datos actuales de la cita, así nunca queda desfasado.
 model Reminder {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId      String    @db.ObjectId
   appointmentId String    @db.ObjectId
   clientName    String
   clientPhone   String
@@ -237,17 +298,24 @@ model Reminder {
   sent          Boolean   @default(false)
   sentAt        DateTime?
   createdAt     DateTime  @default(now())
+
+  @@index([studioId])
 }
 
 model AvailabilityOverride {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId  String   @db.ObjectId
   date      DateTime
   isClosed  Boolean  @default(false)
   startTime String?
   endTime   String?
   note      String?
   createdAt DateTime @default(now())
+
+  @@index([studioId])
 }
+
 // Notas personales del panel: pendientes, compras, "tianguis", "fisio"...
 //
 // Antes se capturaban como citas gratis sin teléfono, lo que inflaba el conteo
@@ -256,30 +324,33 @@ model AvailabilityOverride {
 // que la web pública no ofrezca esos espacios. Solo la reserva pública lo
 // respeta: desde el panel la dueña siempre puede agendar encima.
 model Note {
-  id             String     @id @default(auto()) @map("_id") @db.ObjectId
-  title          String     @default("")
-  body           String     @default("")
+  id       String     @id @default(auto()) @map("_id") @db.ObjectId
+  // Estudio dueño de este registro (ver model Studio).
+  studioId String     @db.ObjectId
+  title    String     @default("")
+  body     String     @default("")
   // Checklist embebida: siempre se lee y escribe junto con la nota.
-  items          NoteItem[]
+  items    NoteItem[]
   // Clave de NOTE_COLORS en lib/notes.ts, nunca una clase CSS cruda.
-  color          String     @default("CREAM")
-  pinned         Boolean    @default(false)
-  archived       Boolean    @default(false)
+  color    String     @default("CREAM")
+  pinned   Boolean    @default(false)
+  archived Boolean    @default(false)
 
   // Fecha opcional. Con allDay, startAt es la medianoche de Chihuahua de ese
   // día y endAt la del día siguiente; así el choque de horarios es un solo
   // cálculo de intervalos para ambos casos.
   startAt        DateTime?
   endAt          DateTime?
-  allDay         Boolean    @default(false)
-  blocksSchedule Boolean    @default(false)
+  allDay         Boolean   @default(false)
+  blocksSchedule Boolean   @default(false)
 
-  createdBy      String
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([archived, pinned, updatedAt])
   @@index([startAt])
+  @@index([studioId])
 }
 
 type NoteItem {

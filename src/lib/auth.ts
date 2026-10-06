@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.trim().toLowerCase() },
         });
 
         if (!user) return null;
@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!passwordMatch) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return { id: user.id, email: user.email, name: user.name, studioId: user.studioId };
       },
     }),
   ],
@@ -37,6 +37,20 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+  },
+  callbacks: {
+    // El estudio viaja dentro del token firmado; el navegador no lo puede cambiar.
+    async jwt({ token, user }) {
+      if (user) token.studioId = user.studioId;
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub ?? "";
+        session.user.studioId = token.studioId;
+      }
+      return session;
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

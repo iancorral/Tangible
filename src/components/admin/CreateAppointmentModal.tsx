@@ -91,7 +91,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
   }, [preselectedDate, preselectedTime]);
 
   useEffect(() => {
-    fetch("/api/services")
+    fetch("/api/admin/services")
       .then((r) => r.json())
       .then(setAllServices);
   }, []);

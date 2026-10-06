@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { maskPhone } from "@/lib/phone";
 import { matchesClient } from "@/lib/search";
 
@@ -12,15 +11,15 @@ import { matchesClient } from "@/lib/search";
 const MAX_CUSTOMERS = 300;
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const term = (new URL(req.url).searchParams.get("q") ?? "").trim();
 
   // Filtered in memory so the match ignores accents (see lib/search.ts).
   const all = await prisma.customer.findMany({
+    where: { studioId },
     select: { id: true, name: true, phone: true, createdAt: true },
   });
   const customers = (term.length >= 2 ? all.filter((c) => matchesClient(c, term)) : all).slice(
@@ -37,6 +36,7 @@ export async function GET(req: Request) {
   const stats = await prisma.appointment.groupBy({
     by: ["customerId"],
     where: {
+      studioId,
       customerId: { in: customers.map((c) => c.id) },
       status: { not: "CANCELLED" },
     },

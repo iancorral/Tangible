@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { z } from "zod";
 
 const blockedDateSchema = z.object({
@@ -10,19 +9,21 @@ const blockedDateSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const dates = await prisma.blockedDate.findMany({
-    where: { date: { gte: new Date() } },
+    where: { studioId, date: { gte: new Date() } },
     orderBy: { date: "asc" },
   });
   return NextResponse.json(dates);
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   try {
     const body = await req.json();
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     const date = new Date(y, m - 1, d, 12, 0, 0);
 
     const blocked = await prisma.blockedDate.create({
-      data: { date, reason: validation.data.reason },
+      data: { studioId, date, reason: validation.data.reason },
     });
     return NextResponse.json(blocked, { status: 201 });
   } catch {
@@ -44,15 +45,17 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   try {
     const { id } = await req.json();
     if (!id || !/^[a-f\d]{24}$/i.test(id)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
-    await prisma.blockedDate.delete({ where: { id } });
+    const { count } = await prisma.blockedDate.deleteMany({ where: { id, studioId } });
+    if (count === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { z } from "zod";
 
 const scheduleSchema = z.array(
@@ -14,10 +13,12 @@ const scheduleSchema = z.array(
 );
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const schedule = await prisma.workSchedule.findMany({
+    where: { studioId },
     orderBy: { dayOfWeek: "asc" },
   });
 
@@ -36,8 +37,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   try {
     const body = await req.json();
@@ -46,8 +48,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
     }
 
-    await prisma.workSchedule.deleteMany();
-    await prisma.workSchedule.createMany({ data: validation.data });
+    // Solo el horario de ESTE estudio: sin el filtro se borraba el de todos.
+    await prisma.workSchedule.deleteMany({ where: { studioId } });
+    await prisma.workSchedule.createMany({
+      data: validation.data.map((day) => ({ ...day, studioId })),
+    });
 
     return NextResponse.json({ ok: true });
   } catch {

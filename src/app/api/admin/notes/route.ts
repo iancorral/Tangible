@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { chihuahuaToUTC } from "@/lib/timezone";
 import { isNoteEmpty, noteInputSchema, resolveSchedule } from "@/lib/notes";
 import { serializeNote } from "@/lib/notes.server";
@@ -20,8 +19,9 @@ const querySchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { searchParams } = new URL(req.url);
   const parsed = querySchema.safeParse({
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     }
 
     const notes = await prisma.note.findMany({
-      where,
+      where: { studioId, ...where },
       orderBy: from ? [{ startAt: "asc" }] : [{ pinned: "desc" }, { updatedAt: "desc" }],
       take: MAX_RESULTS,
     });
@@ -77,8 +77,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   let body: unknown;
   try {
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
 
   try {
     const note = await prisma.note.create({
-      data: { ...data, createdBy: session.user?.email ?? "admin" },
+      data: { ...data, studioId, createdBy: ctx.email },
     });
     return NextResponse.json(serializeNote(note), { status: 201 });
   } catch {

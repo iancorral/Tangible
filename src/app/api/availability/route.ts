@@ -3,6 +3,7 @@ import { addMinutes, isBefore } from "date-fns";
 import { z } from "zod";
 import { chihuahuaToUTC, minutesToLabel, CHIHUAHUA_UTC_OFFSET } from "@/lib/timezone";
 import { resolveDayWindow, getPublicBusyIntervals, overlapsAny } from "@/lib/availability";
+import { getPublicStudio } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,10 @@ export async function GET(req: Request) {
     const dayStart = chihuahuaToUTC(year, month, day, 0, 0);
     const dayEnd = chihuahuaToUTC(year, month, day + 1, 0, 0);
 
-    const window = await resolveDayWindow(year, month, day);
+    const studio = await getPublicStudio();
+    if (!studio) return NextResponse.json([]);
+
+    const window = await resolveDayWindow(studio.id, year, month, day);
     if (window.closed) return NextResponse.json([]);
     const { startMinutes, endMinutes } = window;
 
@@ -46,7 +50,7 @@ export async function GET(req: Request) {
       chihuahuaNow.getUTCMonth() === month - 1 &&
       chihuahuaNow.getUTCDate() === day;
 
-    const busy = await getPublicBusyIntervals(dayStart, dayEnd, excludeId);
+    const busy = await getPublicBusyIntervals(studio.id, dayStart, dayEnd, excludeId);
     const slots: string[] = [];
     let currentMinutes = startMinutes;
 

@@ -63,7 +63,7 @@ export default function EditAppointmentModal({
   const [error,      setError]      = useState("");
 
   useEffect(() => {
-    fetch("/api/services").then((r) => r.json()).then(setAllServices);
+    fetch("/api/admin/services").then((r) => r.json()).then(setAllServices);
   }, []);
 
   const selectedServices = allServices.filter((s) => selectedServiceIds.includes(s.id));

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { chihuahuaToUTC, getChihuahuaParts } from "@/lib/timezone";
 
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const today = getChihuahuaParts(new Date());
   const start = chihuahuaToUTC(today.year, today.month, today.day + 1, 0, 0);
@@ -15,6 +15,7 @@ export async function GET() {
 
   const appointments = await prisma.appointment.findMany({
     where: {
+      studioId,
       status: "CONFIRMED",
       date: { gte: start, lt: end },
       clientPhone: { not: null },
@@ -26,7 +27,7 @@ export async function GET() {
   const ids = appointments.map((a) => a.id);
   const sentLog = ids.length
     ? await prisma.reminder.findMany({
-        where: { appointmentId: { in: ids }, sent: true },
+        where: { studioId, appointmentId: { in: ids }, sent: true },
       })
     : [];
   const sentSet = new Set(sentLog.map((r) => r.appointmentId));
@@ -44,8 +45,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   try {
     const { appointmentId, sent } = await req.json();
@@ -56,21 +58,22 @@ export async function PATCH(req: Request) {
     const markSent = sent === undefined ? true : Boolean(sent);
 
     const appointment = await prisma.appointment.findUnique({
-      where: { id: appointmentId },
+      where: { id: appointmentId, studioId },
     });
     if (!appointment) {
       return NextResponse.json({ error: "Cita no encontrada" }, { status: 404 });
     }
 
-    const existing = await prisma.reminder.findFirst({ where: { appointmentId } });
+    const existing = await prisma.reminder.findFirst({ where: { studioId, appointmentId } });
     if (existing) {
       await prisma.reminder.update({
-        where: { id: existing.id },
+        where: { id: existing.id, studioId },
         data: { sent: markSent, sentAt: markSent ? new Date() : null },
       });
     } else {
       await prisma.reminder.create({
         data: {
+          studioId,
           appointmentId,
           clientName: appointment.clientName,
           clientPhone: appointment.clientPhone ?? "",

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
+  studio: { findUnique: vi.fn() },
+  user: { findUnique: vi.fn() },
   service: { findMany: vi.fn() },
   appointment: { findFirst: vi.fn(), create: vi.fn() },
   customer: { findUnique: vi.fn(), create: vi.fn() },
@@ -12,6 +14,10 @@ vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: sessionMock }));
 
 import { POST } from "./route";
+
+const STUDIO_ID = "6a00000000000000000000aa";
+const STUDIO = { id: STUDIO_ID, slug: "tangible", name: "Tangible", shortName: "Tangible", logoPath: null, features: { rewards: true, publicBooking: true } };
+
 
 const SERVICE = "6a0000000000000000000001";
 const DATE = "2030-03-12T22:00:00.000Z";
@@ -27,7 +33,8 @@ const validBody = { clientName: "Dania Peña", clientPhone: "614 270 8576", serv
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sessionMock.mockResolvedValue({ user: { email: "admin@test" } });
+  sessionMock.mockResolvedValue({ user: { id: "user-tania", email: "tania@test", name: "Tania", studioId: STUDIO_ID } });
+  prismaMock.studio.findUnique.mockResolvedValue(STUDIO);
   prismaMock.service.findMany.mockResolvedValue([{ id: SERVICE, duration: 60 }]);
   prismaMock.appointment.findFirst.mockResolvedValue(null);
   prismaMock.customer.findUnique.mockResolvedValue({ id: "cust-dania" });

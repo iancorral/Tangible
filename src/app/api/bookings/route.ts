@@ -4,6 +4,7 @@ import { addMinutes } from 'date-fns';
 import { z } from 'zod';
 import { isSlotBookable } from '@/lib/availability';
 import { resolveCustomerId } from '@/lib/customers';
+import { getPublicStudio } from '@/lib/tenant';
 import { personNameSchema, phoneSchema } from '@/lib/validation';
 
 const bookingSchema = z.object({
@@ -43,11 +44,19 @@ export async function POST(req: Request) {
 
     const { serviceIds, date, clientName, clientPhone } = validation.data;
 
+    // Las reservas públicas siempre son del estudio dueño del sitio (Tangible).
+    const studio = await getPublicStudio();
+    if (!studio) {
+      return NextResponse.json({ error: "Las reservas en línea no están disponibles" }, { status: 503 });
+    }
+    const studioId = studio.id;
+
     const services = await prisma.service.findMany({
-      where: { id: { in: serviceIds } }
+      where: { id: { in: serviceIds }, studioId, isActive: true }
     });
 
-    if (services.length === 0) {
+    // Todos los servicios pedidos deben existir, estar activos y ser de este estudio.
+    if (services.length !== new Set(serviceIds).size) {
       return NextResponse.json({ error: "Servicios no encontrados" }, { status: 404 });
     }
 
@@ -57,15 +66,16 @@ export async function POST(req: Request) {
 
     // Authoritative server-side availability check. The availability grid is only
     // advisory; never trust the client to have picked a valid, free slot.
-    const slotCheck = await isSlotBookable(startDate, totalDuration);
+    const slotCheck = await isSlotBookable(studioId, startDate, totalDuration);
     if (!slotCheck.ok) {
       return NextResponse.json({ error: slotCheck.reason }, { status: 409 });
     }
 
-    const customerId = await resolveCustomerId(clientName, clientPhone);
+    const customerId = await resolveCustomerId(studioId, clientName, clientPhone);
 
     const appointment = await prisma.appointment.create({
       data: {
+        studioId,
         date: startDate,
         endDate: endDate,
         clientName,

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { normalizePhone } from "@/lib/phone";
 import { matchesClient } from "@/lib/search";
 
@@ -10,10 +9,9 @@ const SEARCH_CANDIDATES = 40;
 const SEARCH_RESULTS = 8;
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
@@ -27,6 +25,7 @@ export async function GET(req: Request) {
 
     // Matched in memory so "Dania Pena" finds "Dania Peña" (see lib/search.ts).
     const all = await prisma.customer.findMany({
+      where: { studioId },
       select: { id: true, name: true, phone: true, createdAt: true },
     });
     const customers = all.filter((c) => matchesClient(c, term)).slice(0, SEARCH_CANDIDATES);
@@ -40,6 +39,7 @@ export async function GET(req: Request) {
     const stats = await prisma.appointment.groupBy({
       by: ["customerId"],
       where: {
+        studioId,
         customerId: { in: customers.map((c) => c.id) },
         status: { not: "CANCELLED" },
       },
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
   }
 
   const customer = await prisma.customer.findUnique({
-    where: { phone: normalized },
+    where: { studioId_phone: { studioId, phone: normalized } },
     select: { id: true },
   });
 
@@ -80,16 +80,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ appointments: [], total: 0 });
   }
 
-  const where = { customerId: customer.id, status: { not: "CANCELLED" } };
+  const filters = { customerId: customer.id, status: { not: "CANCELLED" } };
 
   const [appointments, total] = await Promise.all([
     prisma.appointment.findMany({
-      where,
+      where: { studioId, ...filters },
       include: { services: true },
       orderBy: { date: "desc" },
       take: 3,
     }),
-    prisma.appointment.count({ where }),
+    prisma.appointment.count({ where: { studioId, ...filters } }),
   ]);
 
   return NextResponse.json({ appointments, total });

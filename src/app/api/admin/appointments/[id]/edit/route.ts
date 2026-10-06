@@ -1,7 +1,7 @@
+import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { addMinutes } from "date-fns";
 import { z } from "zod";
 import { resolveCustomerId } from "@/lib/customers";
@@ -27,10 +27,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!id || !/^[a-f\d]{24}$/i.test(id)) {
@@ -55,16 +54,16 @@ export async function PATCH(
 
     if (data.serviceIds) {
       const services = await prisma.service.findMany({
-        where: { id: { in: data.serviceIds } },
+        where: { id: { in: data.serviceIds }, studioId },
       });
-      if (services.length === 0) {
+      if (services.length !== new Set(data.serviceIds).size) {
         return NextResponse.json({ error: "Servicios no encontrados" }, { status: 404 });
       }
       totalDuration = services.reduce((acc, s) => acc + s.duration, 0);
       serviceConnect = data.serviceIds.map((sid) => ({ id: sid }));
     } else {
       const existing = await prisma.appointment.findUnique({
-        where: { id },
+        where: { id, studioId },
         include: { services: true },
       });
       if (!existing) {
@@ -78,7 +77,7 @@ export async function PATCH(
     if (data.date) {
       startDate = new Date(data.date);
     } else {
-      const existing = await prisma.appointment.findUnique({ where: { id } });
+      const existing = await prisma.appointment.findUnique({ where: { id, studioId } });
       if (!existing) {
         return NextResponse.json({ error: "Cita no encontrada" }, { status: 404 });
       }
@@ -99,7 +98,7 @@ export async function PATCH(
       updateData.clientPhone = phone;
       // Keep the customer link in step with the phone on the appointment.
       // Clearing the phone unlinks it: there is no longer anyone to point at.
-      updateData.customerId = await resolveCustomerId(data.clientName, phone);
+      updateData.customerId = await resolveCustomerId(studioId, data.clientName, phone);
     }
     if (data.adminNotes !== undefined) updateData.adminNotes = data.adminNotes;
     if (data.finalPrice !== undefined) updateData.finalPrice = data.finalPrice;
@@ -108,13 +107,16 @@ export async function PATCH(
     }
 
     const updated = await prisma.appointment.update({
-      where: { id },
+      where: { id, studioId },
       data: updateData,
       include: { services: true },
     });
 
     return NextResponse.json(updated);
   } catch (error) {
+    if (isNotFound(error)) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
     console.error(error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }

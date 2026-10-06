@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { isNoteEmpty, noteInputSchema, resolveSchedule } from "@/lib/notes";
 import { serializeNote } from "@/lib/notes.server";
 
@@ -11,8 +10,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!OBJECT_ID.test(id)) {
@@ -33,7 +33,7 @@ export async function PATCH(
   const { schedule, items, ...rest } = parsed.data;
 
   try {
-    const existing = await prisma.note.findUnique({ where: { id } });
+    const existing = await prisma.note.findUnique({ where: { id, studioId } });
     if (!existing) {
       return NextResponse.json({ error: "Nota no encontrada" }, { status: 404 });
     }
@@ -56,7 +56,7 @@ export async function PATCH(
       return NextResponse.json({ error: "La nota está vacía" }, { status: 400 });
     }
 
-    const note = await prisma.note.update({ where: { id }, data });
+    const note = await prisma.note.update({ where: { id, studioId }, data });
     return NextResponse.json(serializeNote(note));
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
@@ -67,8 +67,9 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!OBJECT_ID.test(id)) {
@@ -76,7 +77,7 @@ export async function DELETE(
   }
 
   try {
-    const { count } = await prisma.note.deleteMany({ where: { id } });
+    const { count } = await prisma.note.deleteMany({ where: { id, studioId } });
     if (count === 0) {
       return NextResponse.json({ error: "Nota no encontrada" }, { status: 404 });
     }
