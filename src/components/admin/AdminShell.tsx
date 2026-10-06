@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { usePrivacy } from "@/components/privacy";
+import { useStudio } from "@/components/admin/StudioContext";
+import { rememberStudio } from "@/lib/studio-hint";
 
 /**
  * Navegación del panel.
@@ -53,12 +55,17 @@ const PRIMARY: NavItem[] = [
   { href: "/admin/notes", label: "Notas", icon: "note" },
 ];
 
-const BUSINESS: NavItem[] = [
+type BusinessItem = NavItem & { requires?: "rewards" };
+
+const BUSINESS_ITEMS: BusinessItem[] = [
   { href: "/admin/revenue", label: "Ingresos", icon: "cash" },
-  { href: "/admin/rewards", label: "Premios", icon: "award" },
-  { href: "/admin/qr", label: "QR de tarjeta", icon: "qr" },
+  { href: "/admin/rewards", label: "Premios", icon: "award", requires: "rewards" },
+  { href: "/admin/qr", label: "QR de tarjeta", icon: "qr", requires: "rewards" },
   { href: "/admin/schedule", label: "Horario", icon: "clock" },
 ];
+
+// Sitio público de reservas (solo el estudio que tiene publicBooking).
+const PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "/";
 
 function isActive(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
@@ -68,6 +75,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { hidden, toggle } = usePrivacy();
+  const studio = useStudio();
+  // Solo las secciones que este estudio tiene encendidas (iLoveMe: sin Premios/QR).
+  const BUSINESS = BUSINESS_ITEMS.filter((item) => !item.requires || studio.features[item.requires]);
   const [moreOpen, setMoreOpen] = useState(false);
 
   // Cambiar de pantalla cierra la hoja "Más".
@@ -76,6 +86,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     setLastPath(pathname);
     setMoreOpen(false);
   }
+
+  // Para que el login muestre este logo la próxima vez (ver lib/studio-hint.ts).
+  useEffect(() => {
+    rememberStudio(studio.slug);
+  }, [studio.slug]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -98,9 +113,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-h-[100dvh]">
       {/* ── Barra lateral (escritorio) ───────────────────────────────── */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-60 flex-col border-r border-salon-brown/10 bg-white/80 backdrop-blur-xl">
-        <Link href="/admin" className="px-6 pt-7 pb-6 block">
-          <span className="font-title block text-xl font-black tracking-[0.3em] text-salon-brown">TANGIBLE</span>
-          <span className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
+        <Link href="/admin" className="px-6 pt-7 pb-6 block" aria-label={`${studio.name} — inicio`}>
+          {studio.logoPath ? (
+            // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
+            <img src={studio.logoPath} alt={studio.name} className="h-16 w-auto max-w-full" />
+          ) : (
+            <span className="font-title block text-xl font-black tracking-[0.3em] text-salon-brown uppercase">
+              {studio.shortName}
+            </span>
+          )}
+          <span className="mt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
             <span className="h-px w-5 bg-salon-terracotta" /> Panel
           </span>
         </Link>
@@ -115,9 +137,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         <div className="border-t border-salon-brown/10 p-3 space-y-1">
           <SideButton onClick={toggle} icon={hidden ? "eyeOff" : "eye"} label={hidden ? "Mostrar montos" : "Ocultar montos"} active={hidden} />
-          <a href="/" target="_blank" rel="noopener noreferrer" className={sideItemClass(false)}>
-            <Icon name="globe" /> Ver sitio de reservas
-          </a>
+          {studio.features.publicBooking && (
+            <a href={PUBLIC_SITE_URL} target="_blank" rel="noopener noreferrer" className={sideItemClass(false)}>
+              <Icon name="globe" /> Ver sitio de reservas
+            </a>
+          )}
           <SideButton onClick={logout} icon="logout" label="Cerrar sesión" />
         </div>
       </aside>
@@ -182,12 +206,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     </span>
                   </button>
                 </li>
-                <li>
-                  <a href="/" target="_blank" rel="noopener noreferrer" className={sheetRowClass(false)}>
-                    <Icon name="globe" className="w-5 h-5 text-salon-gray" />
-                    <span className="flex-1">Ver sitio de reservas</span>
-                  </a>
-                </li>
+                {studio.features.publicBooking && (
+                  <li>
+                    <a href={PUBLIC_SITE_URL} target="_blank" rel="noopener noreferrer" className={sheetRowClass(false)}>
+                      <Icon name="globe" className="w-5 h-5 text-salon-gray" />
+                      <span className="flex-1">Ver sitio de reservas</span>
+                    </a>
+                  </li>
+                )}
               </ul>
               <button type="button" onClick={logout} className="w-full rounded-2xl bg-white py-3.5 text-[15px] font-bold text-salon-terracotta active:bg-salon-terracotta/5">
                 Cerrar sesión

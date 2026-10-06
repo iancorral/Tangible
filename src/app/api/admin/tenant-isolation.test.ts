@@ -25,7 +25,8 @@ import { PATCH as patchNote, DELETE as deleteNote } from "./notes/[id]/route";
 import { POST as saveSchedule } from "./schedule/route";
 import { GET as rewardsProgram } from "./rewards/program/route";
 
-const signInAs = (studio: typeof TANGIBLE, withStudioInToken = true) => {
+type FakeStudio = { id: string; slug: string };
+const signInAs = (studio: FakeStudio, withStudioInToken = true) => {
   sessionMock.mockResolvedValue({
     user: { id: `user-${studio.slug}`, email: `${studio.slug}@test`, name: "Test", ...(withStudioInToken ? { studioId: studio.id } : {}) },
   });

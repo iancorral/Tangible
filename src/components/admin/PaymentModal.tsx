@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import AppointmentRewards from "./AppointmentRewards";
+import { useStudio } from "@/components/admin/StudioContext";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type PaymentStatus = "PENDING" | "PARTIAL" | "PAID";
@@ -54,6 +55,7 @@ export default function PaymentModal({
   onClose,
   onUpdated,
 }: Props) {
+  const studio = useStudio();
   useBodyScrollLock();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(currentPaymentStatus);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">(
@@ -302,10 +304,12 @@ export default function PaymentModal({
             </>
           )}
 
-          <AppointmentRewards
-            appointmentId={appointmentId}
-            onFinalPriceChange={applyRewardPrice}
-          />
+          {studio.features.rewards && (
+            <AppointmentRewards
+              appointmentId={appointmentId}
+              onFinalPriceChange={applyRewardPrice}
+            />
+          )}
 
         </div>
 

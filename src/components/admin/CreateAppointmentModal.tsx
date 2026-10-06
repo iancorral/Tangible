@@ -6,6 +6,7 @@ import { es } from "date-fns/locale";
 import AdminTimeGrid, { DayOverviewAppointment } from "@/components/admin/AdminTimeGrid";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { buildConfirmationMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { useStudio } from "@/components/admin/StudioContext";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type Service = {
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export default function CreateAppointmentModal({ onClose, onCreated, preselectedDate, preselectedTime}: Props) {
+  const studio = useStudio();
   useBodyScrollLock();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -249,6 +251,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
         const serviceNames = selectedServices.map((s) => s.name);
         const message = buildConfirmationMessage({
           clientName,
+          studioName: studio.shortName,
           date: finalDate,
           serviceNames,
         });

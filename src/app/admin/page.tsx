@@ -10,7 +10,7 @@ import WhatsAppIcon from '@/components/icons/WhatsAppIcon';
 import { SensitiveAmount } from '@/components/privacy';
 import { getAppointmentAmount, isFreeAmount } from '@/lib/pricing';
 import { buildReminderUrl } from '@/lib/whatsapp';
-import { OWNER_NAME } from '@/lib/config/business';
+import { useStudio } from '@/components/admin/StudioContext';
 import {
   formatChihuahuaTime,
   formatChihuahuaDate,
@@ -66,6 +66,7 @@ const TABS: { id: AppointmentTab; label: string; activeClasses: string; empty: s
 ];
 
 export default function AdminDashboard() {
+  const studio = useStudio();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filter, setFilter] = useState<AppointmentTab>('UPCOMING');
   const [loading, setLoading] = useState(true);
@@ -199,6 +200,12 @@ export default function AdminDashboard() {
         {/* ENCABEZADO */}
         <header className="mb-5 flex items-end justify-between gap-4">
           <div className="min-w-0">
+            {/* Estudios con logo propio (iLoveMe) lo ven aquí; en escritorio
+                también está en la barra lateral. */}
+            {studio.logoPath && (
+              // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
+              <img src={studio.logoPath} alt={studio.name} className="mb-3 h-12 w-auto lg:hidden" />
+            )}
             <p suppressHydrationWarning className="text-[11px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
               {formatChihuahuaDate(now)}
             </p>
@@ -206,7 +213,7 @@ export default function AdminDashboard() {
                 junto al botón; desde sm cabe en una sola. */}
             <h1 suppressHydrationWarning className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.12em] leading-tight mt-1">
               <span className="block sm:inline">{greeting},</span>{' '}
-              <span className="block sm:inline text-salon-terracotta">{OWNER_NAME}</span>
+              <span className="block sm:inline text-salon-terracotta">{studio.firstName}</span>
             </h1>
           </div>
           {/* En celular es un botón redondo para dejarle el ancho al saludo. */}
