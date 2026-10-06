@@ -7,7 +7,7 @@ import MuralDecorations from "@/components/layout/MuralDecorations";
 
 type LoginBrand = { name: string; shortName: string; logoPath: string | null };
 
-export default function LoginForm({ brand }: { brand: LoginBrand | null }) {
+export default function LoginForm({ brand, homeHref }: { brand: LoginBrand | null; homeHref: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export default function LoginForm({ brand }: { brand: LoginBrand | null }) {
       setError("Credenciales incorrectas");
       setLoading(false);
     } else {
-      router.push("/admin");
+      router.push(homeHref);
     }
   };
 

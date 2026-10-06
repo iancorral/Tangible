@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import { REWARD_TYPES, type RewardType } from "@/lib/rewards";
+import { useAdminHref } from "@/components/admin/StudioContext";
 
 type Program = {
   isActive: boolean;
@@ -53,6 +54,7 @@ function StampDots({ filled, total }: { filled: number; total: number }) {
 }
 
 export default function RewardsPage() {
+  const adminPath = useAdminHref();
   const [program, setProgram] = useState<Program | null>(null);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
@@ -501,7 +503,7 @@ export default function RewardsPage() {
                 }`}
               >
                 <Link
-                  href={`/admin/customers/${customer.id}`}
+                  href={adminPath(`/customers/${customer.id}`)}
                   className="min-w-0 flex-1 group"
                 >
                   <p className="font-black text-salon-brown text-sm truncate group-hover:text-salon-olive transition-colors">

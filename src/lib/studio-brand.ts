@@ -13,6 +13,8 @@ export type StudioBrand = {
   features: { rewards: boolean; publicBooking: boolean };
   /** Nombre de pila de quien inició sesión, para el saludo. */
   firstName: string;
+  /** "" en admin.<dominio>, "/admin" en otros hosts (ver lib/admin-path.ts). */
+  adminBase: string;
 };
 
 /**

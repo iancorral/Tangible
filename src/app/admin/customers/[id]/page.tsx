@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import MuralDecorations from "@/components/layout/MuralDecorations";
+import { useAdminHref } from "@/components/admin/StudioContext";
 import PaymentBadge from "@/components/admin/PaymentBadge";
 import FreeTag from "@/components/admin/FreeTag";
 import { SensitiveAmount } from "@/components/privacy";
@@ -43,6 +44,7 @@ type Stats = {
 type Conflict = { id: string; name: string; visits: number };
 
 export default function CustomerDetailPage() {
+  const adminPath = useAdminHref();
   const { id } = useParams<{ id: string }>();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -192,7 +194,7 @@ export default function CustomerDetailPage() {
             Clienta no encontrada
           </p>
           <Link
-            href="/admin/customers"
+            href={adminPath("/customers")}
             className="text-xs text-salon-terracotta font-bold uppercase tracking-wider underline"
           >
             Volver a Clientas
@@ -209,7 +211,7 @@ export default function CustomerDetailPage() {
       <div className="max-w-2xl mx-auto relative z-10">
         <header className="mb-8">
           <Link
-            href="/admin/customers"
+            href={adminPath("/customers")}
             className="text-xs text-salon-gray font-bold uppercase tracking-wider hover:text-salon-brown mb-4 block"
           >
             ← Volver a Clientas
@@ -365,7 +367,7 @@ export default function CustomerDetailPage() {
                   {merging ? "Uniendo..." : "Unir las dos fichas"}
                 </button>
                 <Link
-                  href={`/admin/customers/${conflict.id}`}
+                  href={adminPath(`/customers/${conflict.id}`)}
                   className="px-4 py-2.5 border-2 border-salon-gray/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-salon-gray hover:text-salon-brown transition-colors"
                 >
                   Ver la otra ficha
@@ -418,7 +420,7 @@ export default function CustomerDetailPage() {
               return (
                 <li key={appointment.id}>
                   <Link
-                    href={`/admin/calendar?date=${chihuahuaDateKey(date)}`}
+                    href={adminPath(`/calendar?date=${chihuahuaDateKey(date)}`)}
                     className={`flex items-center gap-4 bg-white p-4 rounded-2xl border-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
                       isCancelled ? "border-gray-100 opacity-60" : "border-salon-olive/20"
                     }`}

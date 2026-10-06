@@ -10,7 +10,7 @@ import WhatsAppIcon from '@/components/icons/WhatsAppIcon';
 import { SensitiveAmount } from '@/components/privacy';
 import { getAppointmentAmount, isFreeAmount } from '@/lib/pricing';
 import { buildReminderUrl } from '@/lib/whatsapp';
-import { useStudio } from '@/components/admin/StudioContext';
+import { useAdminHref, useStudio } from '@/components/admin/StudioContext';
 import {
   formatChihuahuaTime,
   formatChihuahuaDate,
@@ -66,6 +66,7 @@ const TABS: { id: AppointmentTab; label: string; activeClasses: string; empty: s
 ];
 
 export default function AdminDashboard() {
+  const adminPath = useAdminHref();
   const studio = useStudio();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filter, setFilter] = useState<AppointmentTab>('UPCOMING');
@@ -218,7 +219,7 @@ export default function AdminDashboard() {
           </div>
           {/* En celular es un botón redondo para dejarle el ancho al saludo. */}
           <Link
-            href="/admin/calendar?new=1"
+            href={adminPath("/calendar?new=1")}
             aria-label="Nueva cita"
             className="shrink-0 inline-flex h-12 w-12 items-center justify-center gap-2 rounded-full bg-salon-brown text-white shadow-md transition-colors hover:bg-salon-brown/90 active:scale-[0.96] sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[11px] sm:font-black sm:uppercase sm:tracking-widest"
           >
@@ -232,7 +233,7 @@ export default function AdminDashboard() {
         {/* HOY */}
         {!loading && (
           <Link
-            href={`/admin/calendar?date=${todayKey}`}
+            href={adminPath(`/calendar?date=${todayKey}`)}
             className="mb-6 flex items-center gap-4 rounded-3xl border-2 border-salon-olive/15 bg-white/90 p-4 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md"
           >
             <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-salon-olive text-white">
@@ -402,7 +403,7 @@ export default function AdminDashboard() {
                         return (
                           <li key={app.id}>
                             <Link
-                              href={`/admin/calendar?date=${group.key}`}
+                              href={adminPath(`/calendar?date=${group.key}`)}
                               className={`flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-salon-bg/60 active:bg-salon-bg ${
                                 app.status === 'CANCELLED' ? 'opacity-60' : ''
                               }`}

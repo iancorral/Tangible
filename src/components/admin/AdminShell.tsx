@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { usePrivacy } from "@/components/privacy";
-import { useStudio } from "@/components/admin/StudioContext";
+import { useAdminHref, useStudio } from "@/components/admin/StudioContext";
 import { rememberStudio } from "@/lib/studio-hint";
 
 /**
@@ -49,26 +49,27 @@ function Icon({ name, className = "w-5 h-5" }: { name: IconName; className?: str
 type NavItem = { href: string; label: string; icon: IconName };
 
 const PRIMARY: NavItem[] = [
-  { href: "/admin", label: "Inicio", icon: "home" },
-  { href: "/admin/calendar", label: "Agenda", icon: "calendar" },
-  { href: "/admin/customers", label: "Clientas", icon: "users" },
-  { href: "/admin/notes", label: "Notas", icon: "note" },
+  { href: "/", label: "Inicio", icon: "home" },
+  { href: "/calendar", label: "Agenda", icon: "calendar" },
+  { href: "/customers", label: "Clientas", icon: "users" },
+  { href: "/notes", label: "Notas", icon: "note" },
 ];
 
 type BusinessItem = NavItem & { requires?: "rewards" };
 
 const BUSINESS_ITEMS: BusinessItem[] = [
-  { href: "/admin/revenue", label: "Ingresos", icon: "cash" },
-  { href: "/admin/rewards", label: "Premios", icon: "award", requires: "rewards" },
-  { href: "/admin/qr", label: "QR de tarjeta", icon: "qr", requires: "rewards" },
-  { href: "/admin/schedule", label: "Horario", icon: "clock" },
+  { href: "/revenue", label: "Ingresos", icon: "cash" },
+  { href: "/rewards", label: "Premios", icon: "award", requires: "rewards" },
+  { href: "/qr", label: "QR de tarjeta", icon: "qr", requires: "rewards" },
+  { href: "/schedule", label: "Horario", icon: "clock" },
 ];
 
 // Sitio público de reservas (solo el estudio que tiene publicBooking).
 const PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "/";
 
-function isActive(pathname: string, href: string) {
-  return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
+/** `href` ya armado con la base (p. ej. "/calendar" o "/admin/calendar"). */
+function isActive(pathname: string, href: string, homeHref: string) {
+  return href === homeHref ? pathname === homeHref : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -76,8 +77,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { hidden, toggle } = usePrivacy();
   const studio = useStudio();
+  const adminPath = useAdminHref();
+  const home = adminPath("/");
+  const withBase = <T extends NavItem>(items: T[]) => items.map((item) => ({ ...item, href: adminPath(item.href) }));
+  const PRIMARY_NAV = withBase(PRIMARY);
   // Solo las secciones que este estudio tiene encendidas (iLoveMe: sin Premios/QR).
-  const BUSINESS = BUSINESS_ITEMS.filter((item) => !item.requires || studio.features[item.requires]);
+  const BUSINESS = withBase(BUSINESS_ITEMS.filter((item) => !item.requires || studio.features[item.requires]));
+  const active = (href: string) => isActive(pathname, href, home);
   const [moreOpen, setMoreOpen] = useState(false);
 
   // Cambiar de pantalla cierra la hoja "Más".
@@ -107,13 +113,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     router.refresh();
   };
 
-  const moreActive = BUSINESS.some((item) => isActive(pathname, item.href));
+  const moreActive = BUSINESS.some((item) => active(item.href));
 
   return (
     <div className="min-h-[100dvh]">
       {/* ── Barra lateral (escritorio) ───────────────────────────────── */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-60 flex-col border-r border-salon-brown/10 bg-white/80 backdrop-blur-xl">
-        <Link href="/admin" className="px-6 pt-7 pb-6 block" aria-label={`${studio.name} — inicio`}>
+        <Link href={home} className="px-6 pt-7 pb-6 block" aria-label={`${studio.name} — inicio`}>
           {studio.logoPath ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
             <img src={studio.logoPath} alt={studio.name} className="h-16 w-auto max-w-full" />
@@ -128,10 +134,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </Link>
 
         <nav className="flex-1 overflow-y-auto px-3 space-y-6" aria-label="Panel">
-          <SideGroup items={PRIMARY} pathname={pathname} />
+          <SideGroup items={PRIMARY_NAV} isActive={active} />
           <div>
             <p className="px-3 mb-1.5 text-[10px] font-black uppercase tracking-widest text-salon-gray/80">Negocio</p>
-            <SideGroup items={BUSINESS} pathname={pathname} />
+            <SideGroup items={BUSINESS} isActive={active} />
           </div>
         </nav>
 
@@ -155,9 +161,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-salon-brown/10 bg-white/85 backdrop-blur-xl pb-safe"
       >
         <ul className="grid grid-cols-5">
-          {PRIMARY.map((item) => (
+          {PRIMARY_NAV.map((item) => (
             <li key={item.href}>
-              <TabLink item={item} active={isActive(pathname, item.href)} />
+              <TabLink item={item} active={active(item.href)} />
             </li>
           ))}
           <li>
@@ -185,7 +191,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <ul className="overflow-hidden rounded-2xl bg-white divide-y divide-salon-brown/5">
                 {BUSINESS.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className={sheetRowClass(isActive(pathname, item.href))}>
+                    <Link href={item.href} className={sheetRowClass(active(item.href))}>
                       <Icon name={item.icon} className="w-5 h-5 text-salon-terracotta" />
                       <span className="flex-1">{item.label}</span>
                       <span className="text-salon-gray/50" aria-hidden="true">›</span>
@@ -232,11 +238,11 @@ function sideItemClass(active: boolean) {
   }`;
 }
 
-function SideGroup({ items, pathname }: { items: NavItem[]; pathname: string }) {
+function SideGroup({ items, isActive }: { items: NavItem[]; isActive: (href: string) => boolean }) {
   return (
     <ul className="space-y-0.5">
       {items.map((item) => {
-        const active = isActive(pathname, item.href);
+        const active = isActive(item.href);
         return (
           <li key={item.href}>
             <Link href={item.href} aria-current={active ? "page" : undefined} className={sideItemClass(active)}>

@@ -8,6 +8,7 @@ import { PrivacyProvider } from "@/components/privacy";
 import { PRIVACY_COOKIE, isPrivacyEnabled } from "@/lib/privacy";
 import AdminShell from "@/components/admin/AdminShell";
 import { StudioProvider } from "@/components/admin/StudioContext";
+import { getAdminBase } from "@/lib/admin-path.server";
 
 // Ícono, nombre y pantalla de carga de la app instalada según el estudio de la
 // sesión: si Alejandra la agrega a su pantalla de inicio, sale iLoveMe.
@@ -34,6 +35,7 @@ export default async function AdminLayout({
     logoPath: ctx.studio.logoPath,
     features: { rewards: ctx.studio.features.rewards, publicBooking: ctx.studio.features.publicBooking },
     firstName: ctx.firstName,
+    adminBase: await getAdminBase(),
   };
 
   const cookieStore = await cookies();

@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import LoginForm from "@/components/auth/LoginForm";
 import { prisma } from "@/lib/prisma";
 import { STUDIO_HINT_COOKIE } from "@/lib/studio-hint";
+import { getAdminBase } from "@/lib/admin-path.server";
+import { adminHref } from "@/lib/admin-path";
 
 /** Marca del último estudio que entró en este navegador (solo apariencia). */
 async function hintedBrand() {
@@ -14,5 +16,5 @@ async function hintedBrand() {
 }
 
 export default async function LoginPage() {
-  return <LoginForm brand={await hintedBrand()} />;
+  return <LoginForm brand={await hintedBrand()} homeHref={adminHref(await getAdminBase(), "/")} />;
 }
