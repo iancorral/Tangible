@@ -10,7 +10,7 @@ async function hintedBrand() {
   const slug = (await cookies()).get(STUDIO_HINT_COOKIE)?.value;
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return null;
   const studio = await prisma.studio
-    .findUnique({ where: { slug }, select: { name: true, shortName: true, logoPath: true } })
+    .findUnique({ where: { slug }, select: { slug: true, name: true, shortName: true } })
     .catch(() => null);
   return studio;
 }

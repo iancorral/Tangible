@@ -11,6 +11,8 @@ import { SensitiveAmount } from '@/components/privacy';
 import { getAppointmentAmount, isFreeAmount } from '@/lib/pricing';
 import { buildReminderUrl } from '@/lib/whatsapp';
 import { useAdminHref, useStudio } from '@/components/admin/StudioContext';
+import StudioMark from '@/components/brand/StudioMark';
+import { wordmarkClass } from '@/lib/studio-brand';
 import {
   formatChihuahuaTime,
   formatChihuahuaDate,
@@ -201,12 +203,13 @@ export default function AdminDashboard() {
         {/* ENCABEZADO */}
         <header className="mb-5 flex items-end justify-between gap-4">
           <div className="min-w-0">
-            {/* Estudios con logo propio (iLoveMe) lo ven aquí; en escritorio
-                también está en la barra lateral. */}
-            {studio.logoPath && (
-              // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
-              <img src={studio.logoPath} alt={studio.name} className="mb-3 h-12 w-auto lg:hidden" />
-            )}
+            {/* Marca del estudio en celular; en escritorio vive en la barra lateral. */}
+            <div className="mb-4 flex items-center gap-2.5 lg:hidden">
+              <StudioMark slug={studio.slug} name={studio.name} size={38} />
+              <span className={`text-[13px] font-black text-salon-brown ${wordmarkClass(studio.slug)}`}>
+                {studio.shortName}
+              </span>
+            </div>
             <p suppressHydrationWarning className="text-[11px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
               {formatChihuahuaDate(now)}
             </p>

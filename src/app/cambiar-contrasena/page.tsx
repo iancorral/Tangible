@@ -22,7 +22,7 @@ export default async function ChangePasswordPage() {
       forced={session.mustChangePassword}
       firstName={session.firstName}
       email={session.email}
-      brand={{ name: session.studio.name, shortName: session.studio.shortName, logoPath: session.studio.logoPath }}
+      brand={{ slug: session.studio.slug, name: session.studio.name, shortName: session.studio.shortName }}
       backHref={adminHref(await getAdminBase(), "/")}
     />
   );

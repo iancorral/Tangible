@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { usePrivacy } from "@/components/privacy";
 import { useAdminHref, useStudio } from "@/components/admin/StudioContext";
 import { rememberStudio } from "@/lib/studio-hint";
+import StudioMark from "@/components/brand/StudioMark";
+import { wordmarkClass } from "@/lib/studio-brand";
 
 /**
  * Navegación del panel.
@@ -119,45 +121,39 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-[100dvh]">
       {/* ── Barra lateral (escritorio) ───────────────────────────────── */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-60 flex-col border-r border-salon-brown/10 bg-white/80 backdrop-blur-xl">
-        <Link href={home} className="px-6 pt-7 pb-6 block" aria-label={`${studio.name} — inicio`}>
-          {studio.logoPath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
-            <img src={studio.logoPath} alt={studio.name} className="h-16 w-auto max-w-full" />
-          ) : (
-            <span className="font-title block text-xl font-black tracking-[0.3em] text-salon-brown uppercase">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-salon-brown/[0.07] bg-[#FCFAF7]/90 backdrop-blur-xl">
+        {/* Marca del estudio: logo en círculo + nombre, como el "espacio de
+            trabajo" de Notion o Linear. */}
+        <Link href={home} className="mx-3 mt-5 mb-4 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-salon-brown/[0.03]">
+          <StudioMark slug={studio.slug} name={studio.name} size={42} />
+          <span className="min-w-0">
+            <span className={`block truncate text-[15px] font-black text-salon-brown ${wordmarkClass(studio.slug)}`}>
               {studio.shortName}
             </span>
-          )}
-          <span className="mt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
-            <span className="h-px w-5 bg-salon-terracotta" /> Panel
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-salon-terracotta/90">Panel</span>
           </span>
         </Link>
 
-        <nav className="flex-1 overflow-y-auto px-3 space-y-6" aria-label="Panel">
+        <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Panel">
           <SideGroup items={PRIMARY_NAV} isActive={active} />
-          <div>
-            <p className="px-3 mb-1.5 text-[10px] font-black uppercase tracking-widest text-salon-gray/80">Negocio</p>
-            <SideGroup items={BUSINESS} isActive={active} />
-          </div>
+          <p className="mt-6 mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-salon-gray/70">Negocio</p>
+          <SideGroup items={BUSINESS} isActive={active} />
         </nav>
 
-        <div className="border-t border-salon-brown/10 p-3 space-y-1">
-          <SideButton onClick={toggle} icon={hidden ? "eyeOff" : "eye"} label={hidden ? "Mostrar montos" : "Ocultar montos"} active={hidden} />
-          {studio.features.publicBooking && (
-            <a href={PUBLIC_SITE_URL} target="_blank" rel="noopener noreferrer" className={sideItemClass(false)}>
-              <Icon name="globe" /> Ver sitio de reservas
-            </a>
-          )}
-          <Link href="/cambiar-contrasena" className={sideItemClass(false)}>
-            <Icon name="key" /> Cambiar contraseña
-          </Link>
-          <SideButton onClick={logout} icon="logout" label="Cerrar sesión" />
+        <div className="border-t border-salon-brown/[0.07] p-3">
+          <AccountMenu
+            firstName={studio.firstName}
+            email={studio.email}
+            hidden={hidden}
+            onTogglePrivacy={toggle}
+            publicSiteUrl={studio.features.publicBooking ? PUBLIC_SITE_URL : null}
+            onLogout={logout}
+          />
         </div>
       </aside>
 
       {/* ── Contenido ────────────────────────────────────────────────── */}
-      <div className="lg:pl-60 pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
+      <div className="lg:pl-64 pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
 
       {/* ── Pestañas (celular) ───────────────────────────────────────── */}
       <nav
@@ -246,8 +242,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 }
 
 function sideItemClass(active: boolean) {
-  return `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-bold transition-colors ${
-    active ? "bg-salon-brown text-white" : "text-salon-brown/80 hover:bg-salon-brown/5 hover:text-salon-brown"
+  return `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-bold transition-all ${
+    active
+      ? "bg-white text-salon-brown shadow-[0_1px_3px_rgba(44,31,14,0.08)] ring-1 ring-salon-brown/[0.06]"
+      : "text-salon-brown/65 hover:bg-salon-brown/[0.035] hover:text-salon-brown"
   }`;
 }
 
@@ -259,7 +257,10 @@ function SideGroup({ items, isActive }: { items: NavItem[]; isActive: (href: str
         return (
           <li key={item.href}>
             <Link href={item.href} aria-current={active ? "page" : undefined} className={sideItemClass(active)}>
-              <Icon name={item.icon} />
+              <Icon
+                name={item.icon}
+                className={`h-[18px] w-[18px] transition-colors ${active ? "text-salon-terracotta" : "text-salon-brown/45 group-hover:text-salon-brown/70"}`}
+              />
               {item.label}
             </Link>
           </li>
@@ -269,12 +270,94 @@ function SideGroup({ items, isActive }: { items: NavItem[]; isActive: (href: str
   );
 }
 
-function SideButton({ onClick, icon, label, active = false }: { onClick: () => void; icon: IconName; label: string; active?: boolean }) {
+/**
+ * Cuenta de quien inició sesión, abajo de la barra. Las acciones de cuenta
+ * (privacidad, contraseña, salir) viven en un menú en lugar de ocupar cuatro
+ * renglones fijos que competían con la navegación.
+ */
+function AccountMenu({
+  firstName,
+  email,
+  hidden,
+  onTogglePrivacy,
+  publicSiteUrl,
+  onLogout,
+}: {
+  firstName: string;
+  email: string;
+  hidden: boolean;
+  onTogglePrivacy: () => void;
+  publicSiteUrl: string | null;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const item = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-bold text-salon-brown/80 hover:bg-salon-brown/[0.04] hover:text-salon-brown";
+
   return (
-    <button type="button" onClick={onClick} aria-pressed={active || undefined} className={sideItemClass(false)}>
-      <Icon name={icon} className={`w-5 h-5 ${active ? "text-salon-olive" : ""}`} />
-      {label}
-    </button>
+    <div ref={rootRef} className="relative">
+      {open && (
+        <div role="menu" aria-label="Tu cuenta" className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-salon-brown/[0.08] bg-white p-1.5 shadow-[0_12px_32px_-12px_rgba(44,31,14,0.3)]">
+          <button type="button" role="menuitemcheckbox" aria-checked={hidden} onClick={onTogglePrivacy} className={item}>
+            <Icon name={hidden ? "eyeOff" : "eye"} className="h-[18px] w-[18px] text-salon-brown/50" />
+            <span className="flex-1">Ocultar montos</span>
+            <span aria-hidden="true" className={`relative h-5 w-8 rounded-full transition-colors ${hidden ? "bg-salon-olive" : "bg-salon-gray/25"}`}>
+              <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${hidden ? "translate-x-3" : ""}`} />
+            </span>
+          </button>
+          {publicSiteUrl && (
+            <a role="menuitem" href={publicSiteUrl} target="_blank" rel="noopener noreferrer" className={item}>
+              <Icon name="globe" className="h-[18px] w-[18px] text-salon-brown/50" />
+              Ver sitio de reservas
+            </a>
+          )}
+          <Link role="menuitem" href="/cambiar-contrasena" className={item}>
+            <Icon name="key" className="h-[18px] w-[18px] text-salon-brown/50" />
+            Cambiar contraseña
+          </Link>
+          <div className="my-1 h-px bg-salon-brown/[0.06]" />
+          <button type="button" role="menuitem" onClick={onLogout} className={`${item} text-salon-terracotta hover:text-salon-terracotta`}>
+            <Icon name="logout" className="h-[18px] w-[18px]" />
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-salon-brown/[0.035] ${open ? "bg-salon-brown/[0.035]" : ""}`}
+      >
+        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-salon-blush/60 text-sm font-black text-salon-brown">
+          {firstName.charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-bold text-salon-brown">{firstName}</span>
+          <span className="block truncate text-[11px] text-salon-gray">{email}</span>
+        </span>
+        {hidden && <Icon name="eyeOff" className="h-4 w-4 shrink-0 text-salon-olive" />}
+        <svg aria-hidden="true" className={`h-4 w-4 shrink-0 text-salon-brown/40 transition-transform ${open ? "" : "rotate-180"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import MuralDecorations from "@/components/layout/MuralDecorations";
+import StudioMark from "@/components/brand/StudioMark";
 import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   forced: boolean;
   firstName: string;
   email: string;
-  brand: { name: string; shortName: string; logoPath: string | null };
+  brand: { slug: string; name: string; shortName: string };
   /** A dónde volver si el cambio es voluntario. */
   backHref: string;
 }
@@ -77,12 +78,7 @@ export default function ChangePasswordForm({ forced, firstName, email, brand, ba
       <MuralDecorations />
       <div className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-sm rounded-3xl border-2 border-salon-olive/30 shadow-folk p-8 hand-drawn">
         <div className="text-center mb-6">
-          {brand.logoPath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
-            <img src={brand.logoPath} alt={brand.name} className="mx-auto h-20 w-auto" />
-          ) : (
-            <p className="font-title text-2xl font-black text-salon-brown tracking-[0.3em] uppercase">{brand.shortName}</p>
-          )}
+          <StudioMark slug={brand.slug} name={brand.name} size={72} className="mx-auto" />
           <h1 className="mt-4 text-lg font-black text-salon-brown">
             {forced ? `Hola, ${firstName}` : "Cambiar contraseña"}
           </h1>

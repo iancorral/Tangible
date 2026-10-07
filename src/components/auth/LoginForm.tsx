@@ -4,8 +4,13 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import MuralDecorations from "@/components/layout/MuralDecorations";
+import StudioMark from "@/components/brand/StudioMark";
+import { wordmarkClass } from "@/lib/studio-brand";
 
-type LoginBrand = { name: string; shortName: string; logoPath: string | null };
+type LoginBrand = { slug: string; name: string; shortName: string };
+
+// Sin pista del navegador, el login es el de Tangible.
+const DEFAULT_BRAND: LoginBrand = { slug: "tangible", name: "Tangible Nails & Art Studio", shortName: "Tangible" };
 
 export default function LoginForm({
   brand,
@@ -17,6 +22,7 @@ export default function LoginForm({
   notice: string | null;
 }) {
   const router = useRouter();
+  const shown = brand ?? DEFAULT_BRAND;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,14 +51,10 @@ export default function LoginForm({
       <MuralDecorations />
       <div className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-sm rounded-3xl border-2 border-salon-olive/30 shadow-folk p-8 hand-drawn">
         <div className="text-center mb-8">
-          {brand?.logoPath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- logo estático pequeño de /public
-            <img src={brand.logoPath} alt={brand.name} className="mx-auto h-24 w-auto" />
-          ) : (
-            <h1 className="font-title text-2xl font-black text-salon-brown tracking-[0.3em] uppercase">
-              {brand?.shortName ?? "Tangible"}
-            </h1>
-          )}
+          <StudioMark slug={shown.slug} name={shown.name} size={84} className="mx-auto mb-4" />
+          <h1 className={`text-2xl font-black text-salon-brown ${wordmarkClass(shown.slug)}`}>
+            {shown.shortName}
+          </h1>
           <div className="flex items-center justify-center gap-3 mt-1 opacity-70">
             <div className="h-[2px] w-6 bg-salon-terracotta rounded-full" />
             <p className="text-salon-terracotta text-[10px] uppercase tracking-[0.2em] font-bold">

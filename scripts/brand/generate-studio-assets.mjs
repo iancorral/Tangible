@@ -7,6 +7,7 @@
 //
 // Escribe en public/studios/<slug>/:
 //   logo.png               logo de un solo color con fondo transparente (panel)
+//   logo-mark.png          256×256 sobre blanco, para el logo circular del panel
 //   apple-touch-icon.png   180×180, ícono al agregarlo a la pantalla de inicio en iPhone/iPad
 //   icon-192.png / icon-512.png             ícono de la app (Android/escritorio)
 //   icon-maskable-192.png / -512.png        con margen para los recortes de Android
@@ -80,6 +81,7 @@ async function square(logo, size, fill, bg) {
 const logo = await transparentLogo();
 await sharp(logo).resize({ width: 800, withoutEnlargement: true }).png().toFile(join(OUT, "logo.png"));
 
+await (await square(logo, 256, 0.86, WHITE)).toFile(join(OUT, "logo-mark.png"));
 await (await square(logo, 180, 0.8, WHITE)).toFile(join(OUT, "apple-touch-icon.png"));
 await (await square(logo, 192, 0.8, WHITE)).toFile(join(OUT, "icon-192.png"));
 await (await square(logo, 512, 0.8, WHITE)).toFile(join(OUT, "icon-512.png"));

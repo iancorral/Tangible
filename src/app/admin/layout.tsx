@@ -35,6 +35,7 @@ export default async function AdminLayout({
     logoPath: ctx.studio.logoPath,
     features: { rewards: ctx.studio.features.rewards, publicBooking: ctx.studio.features.publicBooking },
     firstName: ctx.firstName,
+    email: ctx.email,
     temporaryPassword: ctx.mustChangePassword,
     adminBase: await getAdminBase(),
   };

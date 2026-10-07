@@ -13,11 +13,24 @@ export type StudioBrand = {
   features: { rewards: boolean; publicBooking: boolean };
   /** Nombre de pila de quien inició sesión, para el saludo. */
   firstName: string;
+  /** Correo de la cuenta (tarjeta de cuenta de la barra lateral). */
+  email: string;
   /** Sigue con la contraseña temporal: el inicio muestra un aviso para cambiarla. */
   temporaryPassword: boolean;
   /** "" en admin.<dominio>, "/admin" en otros hosts (ver lib/admin-path.ts). */
   adminBase: string;
 };
+
+/**
+ * Cómo se escribe el nombre junto al logo. El logotipo de Tangible va en
+ * mayúsculas espaciadas (Boston Angel); cualquier otro estudio conserva la
+ * escritura de su marca ("iLoveMe", no "ILOVEME").
+ */
+export function wordmarkClass(slug: string): string {
+  return slug === "tangible"
+    ? "font-title uppercase tracking-[0.18em]"
+    : "font-sans tracking-normal";
+}
 
 /**
  * Íconos, manifest y pantallas de carga. Tangible conserva sus archivos
@@ -29,6 +42,8 @@ export function studioAssets(slug: string) {
   if (slug === "tangible") {
     return {
       manifest: "/manifest.webmanifest",
+      // Recorte de la ilustración para el logo circular del panel.
+      mark: "/studios/tangible/logo-mark.png",
       appleTouchIcon: "/icons/apple-touch-icon.png",
       favicon32: "/icons/favicon-32.png",
       favicon16: "/icons/favicon-16.png",
@@ -39,6 +54,7 @@ export function studioAssets(slug: string) {
   const base = `/studios/${slug}`;
   return {
     manifest: `${base}/manifest.webmanifest`,
+    mark: `${base}/logo-mark.png`,
     appleTouchIcon: `${base}/apple-touch-icon.png`,
     favicon32: `${base}/favicon-32.png`,
     favicon16: `${base}/favicon-16.png`,
