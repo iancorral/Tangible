@@ -22,7 +22,7 @@ export type StudioSession = {
   firstName: string;
   studioId: string;
   studio: Studio;
-  /** Entró con una contraseña temporal: debe cambiarla antes de usar el panel. */
+  /** Sigue con la contraseña temporal con la que se creó la cuenta (se le sugiere cambiarla). */
   mustChangePassword: boolean;
 };
 
@@ -65,13 +65,10 @@ export const getPanelSession = cache(async (): Promise<StudioSession | null> => 
 });
 
 /**
- * Sesión lista para usar el panel y sus APIs. Una cuenta con contraseña
- * temporal no pasa de aquí hasta cambiarla (ver /cambiar-contrasena).
+ * Sesión lista para usar el panel y sus APIs. Una contraseña temporal NO
+ * bloquea: el inicio muestra un aviso hasta que se cambie (como en Darpe).
  */
-export const requireStudio = cache(async (): Promise<StudioSession | null> => {
-  const session = await getPanelSession();
-  return session && !session.mustChangePassword ? session : null;
-});
+export const requireStudio = getPanelSession;
 
 /**
  * Estudio dueño del sitio público de reservas (www). Solo uno: el que diga

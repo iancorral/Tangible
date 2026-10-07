@@ -12,8 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { ...studioPwaMetadata(session.studio), title: { absolute: `${session.studio.shortName} · Contraseña` } };
 }
 
-// Fuera del layout del panel a propósito: es la única pantalla disponible
-// mientras la cuenta tiene una contraseña temporal.
+// Fuera del layout del panel: pantalla sencilla y enfocada, como el login.
 export default async function ChangePasswordPage() {
   const session = await getPanelSession();
   if (!session) redirect("/login");
@@ -22,6 +21,7 @@ export default async function ChangePasswordPage() {
     <ChangePasswordForm
       forced={session.mustChangePassword}
       firstName={session.firstName}
+      email={session.email}
       brand={{ name: session.studio.name, shortName: session.studio.shortName, logoPath: session.studio.logoPath }}
       backHref={adminHref(await getAdminBase(), "/")}
     />

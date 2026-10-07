@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 interface Props {
+  /** Sigue con la contraseña temporal (cambia el texto, no bloquea nada). */
   forced: boolean;
   firstName: string;
+  email: string;
   brand: { name: string; shortName: string; logoPath: string | null };
   /** A dónde volver si el cambio es voluntario. */
   backHref: string;
@@ -19,7 +21,7 @@ const inputClass =
   "w-full bg-white border-2 border-salon-gray/30 px-4 py-3 text-salon-brown focus:border-salon-lavender focus:ring-0 outline-none transition-all hand-drawn placeholder:text-salon-gray/40 font-medium";
 const labelClass = "block text-[10px] font-bold text-salon-terracotta uppercase tracking-widest mb-2";
 
-export default function ChangePasswordForm({ forced, firstName, brand, backHref }: Props) {
+export default function ChangePasswordForm({ forced, firstName, email, brand, backHref }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -63,10 +65,10 @@ export default function ChangePasswordForm({ forced, firstName, brand, backHref 
       return;
     }
 
-    // El cambio invalida las sesiones anteriores (incluida esta): se entra de
-    // nuevo con la contraseña nueva.
-    await signOut({ redirect: false });
-    router.replace("/login?cambiada=1");
+    // El cambio cierra las sesiones abiertas con la contraseña anterior (en
+    // otros dispositivos). Esta se renueva sola con la nueva para no sacarla.
+    const renewed = await signIn("credentials", { email, password: body.next, redirect: false });
+    router.replace(renewed?.ok ? backHref : "/login?cambiada=1");
     router.refresh();
   };
 
@@ -86,7 +88,7 @@ export default function ChangePasswordForm({ forced, firstName, brand, backHref 
           </h1>
           <p className="mt-1 text-xs text-salon-gray leading-relaxed">
             {forced
-              ? "Entraste con una contraseña temporal. Elige una tuya para que tu panel sea privado: solo tú la sabrás."
+              ? "Estás usando una contraseña temporal. Elige una tuya para que tu panel sea privado: solo tú la sabrás."
               : "Al guardarla se cerrarán las sesiones abiertas en otros dispositivos."}
           </p>
         </div>
@@ -131,11 +133,9 @@ export default function ChangePasswordForm({ forced, firstName, brand, backHref 
           </button>
         </form>
 
-        {!forced && (
-          <Link href={backHref} className="mt-5 block text-center text-[11px] font-bold uppercase tracking-wider text-salon-gray hover:text-salon-brown">
-            ← Volver al panel
-          </Link>
-        )}
+        <Link href={backHref} className="mt-5 block text-center text-[11px] font-bold uppercase tracking-wider text-salon-gray hover:text-salon-brown">
+          {forced ? "Ahora no, volver al panel" : "← Volver al panel"}
+        </Link>
       </div>
     </main>
   );

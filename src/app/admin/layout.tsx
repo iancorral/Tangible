@@ -27,8 +27,6 @@ export default async function AdminLayout({
 }) {
   const ctx = await getPanelSession();
   if (!ctx) redirect("/login");
-  // Contraseña temporal: primero elige la suya.
-  if (ctx.mustChangePassword) redirect("/cambiar-contrasena");
 
   const brand: StudioBrand = {
     slug: ctx.studio.slug,
@@ -37,6 +35,7 @@ export default async function AdminLayout({
     logoPath: ctx.studio.logoPath,
     features: { rewards: ctx.studio.features.rewards, publicBooking: ctx.studio.features.publicBooking },
     firstName: ctx.firstName,
+    temporaryPassword: ctx.mustChangePassword,
     adminBase: await getAdminBase(),
   };
 

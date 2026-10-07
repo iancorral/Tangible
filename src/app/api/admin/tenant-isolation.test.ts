@@ -109,11 +109,10 @@ describe("aislamiento entre Tangible e iLoveMe", () => {
     expect(prismaMock.user.findUnique.mock.calls[0][0].where).toEqual({ id: "user-tangible" });
   });
 
-  it("con contraseña temporal, las APIs del panel no responden hasta cambiarla", async () => {
-    signInAs(ILOVEME, { mustChangePassword: true });
+  it("con contraseña temporal se usa el panel normal (solo se muestra un aviso)", async () => {
+    signInAs(TANGIBLE, { mustChangePassword: true });
     const res = await deleteNote(new Request("http://test", { method: "DELETE" }), params(TANIA_NOTE));
-    expect(res.status).toBe(401);
-    expect(prismaMock.note.deleteMany).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
   });
 
   it("una sesión iniciada antes de cambiar la contraseña ya no sirve", async () => {

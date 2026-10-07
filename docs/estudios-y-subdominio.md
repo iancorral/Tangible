@@ -32,9 +32,9 @@ antes del despliegue**.
 5. `npm run studios:migrate -- --apply` otra vez: marca lo que la versión anterior
    haya creado entre los pasos 2 y 4.
 6. `npm run users:create -- --email=alejandra@tangible.com --name=Alejandra --studio=iloveme`
-   pide una contraseña **temporal** (sin mostrarla). Al entrar por primera vez,
-   la cuenta solo puede ver "Elige tu contraseña"; al cambiarla, la temporal y
-   toda sesión abierta con ella dejan de servir.
+   pide una contraseña **temporal** (sin mostrarla). La cuenta usa el panel
+   normal desde el principio, con un aviso en el inicio hasta que elija la suya;
+   al cambiarla, toda sesión abierta con la temporal en otros dispositivos se cierra.
    - ¿Olvidó su contraseña? `npm run users:create -- --email=<correo> --reset`
      pone una temporal nueva y cierra sus sesiones.
 

@@ -230,6 +230,27 @@ export default function AdminDashboard() {
           </Link>
         </header>
 
+        {/* Sin botón de cerrar a propósito: un aviso que se puede descartar nadie
+            lo atiende. Desaparece solo cuando se cambia la contraseña. */}
+        {studio.temporaryPassword && (
+          <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-salon-mustard-200 bg-salon-mustard-50 px-4 py-3 sm:items-center">
+            <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-salon-mustard-400/20 text-salon-mustard-700">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="7.5" cy="15.5" r="5.5" />
+                <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+              <p className="text-sm leading-snug text-salon-mustard-700 sm:flex-1">
+                Entraste con una contraseña temporal. Cámbiala para que tu panel sea privado.
+              </p>
+              <Link href="/cambiar-contrasena" className="mt-1 inline-block text-sm font-bold text-salon-mustard-700 underline underline-offset-4 sm:mt-0 sm:shrink-0">
+                Cambiar contraseña
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* HOY */}
         {!loading && (
           <Link

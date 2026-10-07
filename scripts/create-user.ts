@@ -1,8 +1,9 @@
 // scripts/create-user.ts
 //
-// Crea una cuenta del panel para un estudio con una contraseña TEMPORAL: al
-// entrar por primera vez, la persona elige la suya y la temporal deja de
-// servir (también se cierran las sesiones abiertas con ella).
+// Crea una cuenta del panel para un estudio con una contraseña TEMPORAL: puede
+// usar el panel desde el primer momento, y el inicio le muestra un aviso hasta
+// que elija la suya. Al cambiarla se cierran las sesiones abiertas con la
+// temporal (por ejemplo, la de quien la creó para probar).
 //
 //   npm run users:create -- --email=alejandra@tangible.com --name=Alejandra --studio=iloveme
 //   npm run users:create -- --email=alejandra@tangible.com --reset     (olvidó su contraseña)
@@ -63,7 +64,7 @@ async function resetPassword(email: string) {
       passwordChangedAt: new Date(),
     },
   });
-  console.log(`Contraseña temporal puesta para ${email}. Al entrar se le pedirá elegir una nueva.`);
+  console.log(`Contraseña temporal puesta para ${email}. El panel le mostrará un aviso para cambiarla.`);
 }
 
 async function askNewPassword(email: string): Promise<string> {
@@ -99,7 +100,7 @@ async function main() {
     },
   });
   console.log(`Cuenta creada: ${email} → ${studio.name}`);
-  console.log("Es una contraseña temporal: al entrar por primera vez se le pedirá elegir la suya.");
+  console.log("Es una contraseña temporal: el panel le mostrará un aviso para cambiarla cuando quiera.");
 }
 
 main()
