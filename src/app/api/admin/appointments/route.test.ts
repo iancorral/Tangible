@@ -35,6 +35,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionMock.mockResolvedValue({ user: { id: "user-tania", email: "tania@test", name: "Tania", studioId: STUDIO_ID } });
   prismaMock.studio.findUnique.mockResolvedValue(STUDIO);
+  prismaMock.user.findUnique.mockResolvedValue({ studioId: STUDIO_ID, email: "tania@test", name: "Tania", mustChangePassword: false, passwordChangedAt: null });
   prismaMock.service.findMany.mockResolvedValue([{ id: SERVICE, duration: 60 }]);
   prismaMock.appointment.findFirst.mockResolvedValue(null);
   prismaMock.customer.findUnique.mockResolvedValue({ id: "cust-dania" });

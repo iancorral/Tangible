@@ -48,6 +48,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.studioId = token.studioId;
+        session.user.issuedAt = typeof token.iat === "number" ? token.iat : undefined;
       }
       return session;
     },

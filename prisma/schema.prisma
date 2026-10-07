@@ -33,13 +33,18 @@ type StudioFeatures {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
   // Estudio dueño de este registro (ver model Studio).
-  studioId  String   @db.ObjectId
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
+  studioId           String    @db.ObjectId
+  email              String    @unique
+  password           String
+  name               String
+  // Contraseña temporal (cuenta recién creada o restablecida): hay que
+  // cambiarla antes de usar el panel. Opcional para no exigir migración.
+  mustChangePassword Boolean?
+  // Las sesiones iniciadas antes de esta fecha dejan de valer (ver lib/tenant.ts).
+  passwordChangedAt  DateTime?
+  createdAt          DateTime  @default(now())
 
   @@index([studioId])
 }

@@ -26,9 +26,18 @@ import { POST as saveSchedule } from "./schedule/route";
 import { GET as rewardsProgram } from "./rewards/program/route";
 
 type FakeStudio = { id: string; slug: string };
-const signInAs = (studio: FakeStudio, withStudioInToken = true) => {
+type AccountState = { mustChangePassword?: boolean; passwordChangedAt?: Date | null; issuedAt?: number };
+const signInAs = (studio: FakeStudio, account: AccountState = {}) => {
+  const issuedAt = account.issuedAt ?? Math.floor(Date.now() / 1000);
   sessionMock.mockResolvedValue({
-    user: { id: `user-${studio.slug}`, email: `${studio.slug}@test`, name: "Test", ...(withStudioInToken ? { studioId: studio.id } : {}) },
+    user: { id: `user-${studio.slug}`, email: `${studio.slug}@test`, name: "Test", studioId: studio.id, issuedAt },
+  });
+  prismaMock.user.findUnique.mockResolvedValue({
+    studioId: studio.id,
+    email: `${studio.slug}@test`,
+    name: studio.slug === "iloveme" ? "Alejandra" : "Tania",
+    mustChangePassword: account.mustChangePassword ?? false,
+    passwordChangedAt: account.passwordChangedAt ?? null,
   });
   prismaMock.studio.findUnique.mockImplementation(({ where }: { where: { id: string } }) =>
     Promise.resolve([TANGIBLE, ILOVEME].find((s) => s.id === where.id) ?? null)
@@ -93,12 +102,32 @@ describe("aislamiento entre Tangible e iLoveMe", () => {
     expect(res.status).toBe(403);
   });
 
-  it("una sesión de antes de los estudios sigue funcionando (sin cerrar sesión)", async () => {
-    signInAs(TANGIBLE, false);
-    prismaMock.user.findUnique.mockResolvedValue({ studioId: TANGIBLE.id });
+  it("el estudio sale de la cuenta en la base, no del token (sesiones de antes de los estudios siguen sirviendo)", async () => {
+    signInAs(TANGIBLE);
     const res = await deleteNote(new Request("http://test", { method: "DELETE" }), params(TANIA_NOTE));
     expect(res.status).toBe(200);
-    expect(prismaMock.user.findUnique).toHaveBeenCalledWith({ where: { id: "user-tangible" }, select: { studioId: true } });
+    expect(prismaMock.user.findUnique.mock.calls[0][0].where).toEqual({ id: "user-tangible" });
+  });
+
+  it("con contraseña temporal, las APIs del panel no responden hasta cambiarla", async () => {
+    signInAs(ILOVEME, { mustChangePassword: true });
+    const res = await deleteNote(new Request("http://test", { method: "DELETE" }), params(TANIA_NOTE));
+    expect(res.status).toBe(401);
+    expect(prismaMock.note.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("una sesión iniciada antes de cambiar la contraseña ya no sirve", async () => {
+    const changedAt = new Date();
+    signInAs(ILOVEME, { passwordChangedAt: changedAt, issuedAt: Math.floor(changedAt.getTime() / 1000) - 3600 });
+    const res = await deleteNote(new Request("http://test", { method: "DELETE" }), params(TANIA_NOTE));
+    expect(res.status).toBe(401);
+  });
+
+  it("una cuenta borrada deja de entrar aunque su sesión no haya vencido", async () => {
+    signInAs(TANGIBLE);
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    const res = await deleteNote(new Request("http://test", { method: "DELETE" }), params(TANIA_NOTE));
+    expect(res.status).toBe(401);
   });
 
   it("sin sesión no hay acceso", async () => {

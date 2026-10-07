@@ -1,10 +1,14 @@
 // scripts/create-user.ts
 //
-// Crea una cuenta del panel para un estudio. La contraseña se escribe al
-// correr el script (no se ve en pantalla) y solo se guarda su hash bcrypt:
-// nunca queda en el historial de la terminal, en el código ni en un archivo.
+// Crea una cuenta del panel para un estudio con una contraseña TEMPORAL: al
+// entrar por primera vez, la persona elige la suya y la temporal deja de
+// servir (también se cierran las sesiones abiertas con ella).
 //
 //   npm run users:create -- --email=alejandra@tangible.com --name=Alejandra --studio=iloveme
+//   npm run users:create -- --email=alejandra@tangible.com --reset     (olvidó su contraseña)
+//
+// La contraseña se escribe al correr el script (no se ve en pantalla) y solo
+// se guarda su hash bcrypt: nunca queda en el historial, el código ni un archivo.
 
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
@@ -46,8 +50,33 @@ function askHidden(question: string): Promise<string> {
   });
 }
 
+async function resetPassword(email: string) {
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (!user) throw new Error(`No existe una cuenta con ${email}`);
+  const password = await askNewPassword(email);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: await bcrypt.hash(password, 12),
+      mustChangePassword: true,
+      // Cierra cualquier sesión abierta con la contraseña anterior.
+      passwordChangedAt: new Date(),
+    },
+  });
+  console.log(`Contraseña temporal puesta para ${email}. Al entrar se le pedirá elegir una nueva.`);
+}
+
+async function askNewPassword(email: string): Promise<string> {
+  const password = await askHidden(`Contraseña temporal para ${email} (mín. ${MIN_LENGTH}): `);
+  if (password.length < MIN_LENGTH) throw new Error(`La contraseña debe tener al menos ${MIN_LENGTH} caracteres`);
+  const confirm = await askHidden("Repite la contraseña: ");
+  if (confirm !== password) throw new Error("Las contraseñas no coinciden");
+  return password;
+}
+
 async function main() {
   const email = arg("email")?.toLowerCase();
+  if (email && process.argv.includes("--reset")) return resetPassword(email);
   const name = arg("name");
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name) {
     throw new Error("Uso: npm run users:create -- --email=<correo> --name=<Nombre> --studio=<slug>");
@@ -58,15 +87,19 @@ async function main() {
     throw new Error(`Ya existe una cuenta con ${email}`);
   }
 
-  const password = await askHidden(`Contraseña para ${email} (mín. ${MIN_LENGTH}): `);
-  if (password.length < MIN_LENGTH) throw new Error(`La contraseña debe tener al menos ${MIN_LENGTH} caracteres`);
-  const confirm = await askHidden("Repite la contraseña: ");
-  if (confirm !== password) throw new Error("Las contraseñas no coinciden");
+  const password = await askNewPassword(email);
 
   await prisma.user.create({
-    data: { email, name, studioId: studio.id, password: await bcrypt.hash(password, 12) },
+    data: {
+      email,
+      name,
+      studioId: studio.id,
+      password: await bcrypt.hash(password, 12),
+      mustChangePassword: true,
+    },
   });
   console.log(`Cuenta creada: ${email} → ${studio.name}`);
+  console.log("Es una contraseña temporal: al entrar por primera vez se le pedirá elegir la suya.");
 }
 
 main()

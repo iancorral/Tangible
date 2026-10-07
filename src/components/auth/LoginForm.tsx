@@ -7,7 +7,15 @@ import MuralDecorations from "@/components/layout/MuralDecorations";
 
 type LoginBrand = { name: string; shortName: string; logoPath: string | null };
 
-export default function LoginForm({ brand, homeHref }: { brand: LoginBrand | null; homeHref: string }) {
+export default function LoginForm({
+  brand,
+  homeHref,
+  notice,
+}: {
+  brand: LoginBrand | null;
+  homeHref: string;
+  notice: string | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,6 +61,12 @@ export default function LoginForm({ brand, homeHref }: { brand: LoginBrand | nul
             <div className="h-[2px] w-6 bg-salon-terracotta rounded-full" />
           </div>
         </div>
+
+        {notice && (
+          <p role="status" className="mb-4 text-xs text-salon-olive font-bold text-center bg-salon-olive/10 py-2 px-3 rounded-lg">
+            {notice}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

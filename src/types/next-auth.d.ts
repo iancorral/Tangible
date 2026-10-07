@@ -6,6 +6,8 @@ declare module "next-auth" {
     user: {
       id: string;
       studioId?: string;
+      /** Segundos epoch en que se emitió el token (para invalidarlo al cambiar contraseña). */
+      issuedAt?: number;
     } & DefaultSession["user"];
   }
 

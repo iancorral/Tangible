@@ -20,7 +20,7 @@ import { rememberStudio } from "@/lib/studio-hint";
 
 type IconName =
   | "home" | "calendar" | "users" | "note" | "more" | "cash"
-  | "award" | "qr" | "clock" | "eye" | "eyeOff" | "logout" | "globe";
+  | "award" | "qr" | "clock" | "eye" | "eyeOff" | "logout" | "globe" | "key";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z" /></>,
@@ -35,6 +35,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>,
   eyeOff: <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></>,
   logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></>,
+  key: <><circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" /></>,
   globe: <><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>,
 };
 
@@ -148,6 +149,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <Icon name="globe" /> Ver sitio de reservas
             </a>
           )}
+          <Link href="/cambiar-contrasena" className={sideItemClass(false)}>
+            <Icon name="key" /> Cambiar contraseña
+          </Link>
           <SideButton onClick={logout} icon="logout" label="Cerrar sesión" />
         </div>
       </aside>
@@ -220,6 +224,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     </a>
                   </li>
                 )}
+              </ul>
+              <ul className="overflow-hidden rounded-2xl bg-white">
+                <li>
+                  <Link href="/cambiar-contrasena" className={sheetRowClass(false)}>
+                    <Icon name="key" className="w-5 h-5 text-salon-gray" />
+                    <span className="flex-1">Cambiar contraseña</span>
+                    <span className="text-salon-gray/50" aria-hidden="true">›</span>
+                  </Link>
+                </li>
               </ul>
               <button type="button" onClick={logout} className="w-full rounded-2xl bg-white py-3.5 text-[15px] font-bold text-salon-terracotta active:bg-salon-terracotta/5">
                 Cerrar sesión

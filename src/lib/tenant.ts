@@ -22,40 +22,55 @@ export type StudioSession = {
   firstName: string;
   studioId: string;
   studio: Studio;
+  /** Entró con una contraseña temporal: debe cambiarla antes de usar el panel. */
+  mustChangePassword: boolean;
 };
 
 const findStudio = cache(async (id: string) => prisma.studio.findUnique({ where: { id } }));
 
 /**
- * Sesión del panel con su estudio, o null si no hay sesión válida.
+ * Sesión firmada + la cuenta tal como está HOY en la base, o null.
  *
- * Las sesiones emitidas antes de que existieran los estudios no traen
- * `studioId`; para no cerrar la sesión de nadie al desplegar, se resuelve por
- * el usuario la primera vez.
+ * Se consulta la cuenta en cada petición (una lectura pequeña, memorizada por
+ * petición) para que los cambios surtan efecto al instante: una cuenta borrada
+ * deja de entrar, y al cambiar la contraseña las sesiones anteriores dejan de
+ * valer — aunque su token firmado todavía no haya vencido.
  */
-export const requireStudio = cache(async (): Promise<StudioSession | null> => {
+export const getPanelSession = cache(async (): Promise<StudioSession | null> => {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return null;
+  const userId = session?.user?.id;
+  if (!userId) return null;
 
-  let { studioId } = session.user;
-  const userId = session.user.id;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { studioId: true, email: true, name: true, mustChangePassword: true, passwordChangedAt: true },
+  });
+  if (!user) return null;
 
-  if (!studioId && userId) {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { studioId: true } });
-    studioId = user?.studioId;
-  }
-  if (!studioId || !userId) return null;
+  // Token emitido antes del último cambio de contraseña: ya no vale.
+  const issuedAtMs = (session.user.issuedAt ?? 0) * 1000;
+  if (user.passwordChangedAt && issuedAtMs < user.passwordChangedAt.getTime() - 1000) return null;
 
-  const studio = await findStudio(studioId);
+  const studio = await findStudio(user.studioId);
   if (!studio) return null;
 
   return {
     userId,
-    email: session.user.email ?? "",
-    firstName: (session.user.name ?? "").trim().split(/\s+/)[0] || studio.shortName,
-    studioId,
+    email: user.email,
+    firstName: user.name.trim().split(/\s+/)[0] || studio.shortName,
+    studioId: user.studioId,
     studio,
+    mustChangePassword: user.mustChangePassword === true,
   };
+});
+
+/**
+ * Sesión lista para usar el panel y sus APIs. Una cuenta con contraseña
+ * temporal no pasa de aquí hasta cambiarla (ver /cambiar-contrasena).
+ */
+export const requireStudio = cache(async (): Promise<StudioSession | null> => {
+  const session = await getPanelSession();
+  return session && !session.mustChangePassword ? session : null;
 });
 
 /**

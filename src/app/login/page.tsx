@@ -15,6 +15,13 @@ async function hintedBrand() {
   return studio;
 }
 
-export default async function LoginPage() {
-  return <LoginForm brand={await hintedBrand()} homeHref={adminHref(await getAdminBase(), "/")} />;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ cambiada?: string }> }) {
+  const { cambiada } = await searchParams;
+  return (
+    <LoginForm
+      brand={await hintedBrand()}
+      homeHref={adminHref(await getAdminBase(), "/")}
+      notice={cambiada ? "Listo, tu contraseña quedó guardada. Entra con la nueva." : null}
+    />
+  );
 }

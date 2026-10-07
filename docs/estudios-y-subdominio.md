@@ -32,7 +32,14 @@ antes del despliegue**.
 5. `npm run studios:migrate -- --apply` otra vez: marca lo que la versión anterior
    haya creado entre los pasos 2 y 4.
 6. `npm run users:create -- --email=alejandra@tangible.com --name=Alejandra --studio=iloveme`
-   (pide la contraseña sin mostrarla).
+   pide una contraseña **temporal** (sin mostrarla). Al entrar por primera vez,
+   la cuenta solo puede ver "Elige tu contraseña"; al cambiarla, la temporal y
+   toda sesión abierta con ella dejan de servir.
+   - ¿Olvidó su contraseña? `npm run users:create -- --email=<correo> --reset`
+     pone una temporal nueva y cierra sus sesiones.
+
+Antes de desplegar, `npm run db:backup` guarda un respaldo completo en
+`scripts/.backups/` (no se sube a git).
 
 ### Subdominio
 

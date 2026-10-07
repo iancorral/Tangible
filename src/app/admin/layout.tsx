@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminPwaMetadata, studioPwaMetadata } from "@/lib/pwa-metadata";
-import { requireStudio } from "@/lib/tenant";
+import { getPanelSession } from "@/lib/tenant";
 import type { StudioBrand } from "@/lib/studio-brand";
 import { PrivacyProvider } from "@/components/privacy";
 import { PRIVACY_COOKIE, isPrivacyEnabled } from "@/lib/privacy";
@@ -13,7 +13,7 @@ import { getAdminBase } from "@/lib/admin-path.server";
 // Ícono, nombre y pantalla de carga de la app instalada según el estudio de la
 // sesión: si Alejandra la agrega a su pantalla de inicio, sale iLoveMe.
 export async function generateMetadata(): Promise<Metadata> {
-  const ctx = await requireStudio();
+  const ctx = await getPanelSession();
   // "absolute" evita la plantilla de la raíz ("%s | Tangible") en otros estudios.
   return ctx
     ? { ...studioPwaMetadata(ctx.studio), title: { absolute: `${ctx.studio.shortName} · Panel` } }
@@ -25,8 +25,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const ctx = await requireStudio();
+  const ctx = await getPanelSession();
   if (!ctx) redirect("/login");
+  // Contraseña temporal: primero elige la suya.
+  if (ctx.mustChangePassword) redirect("/cambiar-contrasena");
 
   const brand: StudioBrand = {
     slug: ctx.studio.slug,

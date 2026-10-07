@@ -17,7 +17,7 @@ import { ADMIN_PREFIX, isAdminHost } from "@/lib/admin-path";
  */
 
 // Nunca se reescriben: APIs, login, archivos de Next y la marca/íconos.
-const PASSTHROUGH = /^\/(?:api|_next|login|studios|icons|splash|fonts)(?:\/|$)/;
+const PASSTHROUGH = /^\/(?:api|_next|login|cambiar-contrasena|studios|icons|splash|fonts)(?:\/|$)/;
 
 function isAdminPath(pathname: string) {
   return pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
@@ -45,12 +45,13 @@ export function proxy(request: NextRequest) {
   }
 
   const adminHost = process.env.ADMIN_HOST?.trim().toLowerCase();
-  if (adminHost && isAdminHost(adminHost) && (isAdminPath(pathname) || pathname === "/login")) {
+  const isAuthPage = pathname === "/login" || pathname === "/cambiar-contrasena";
+  if (adminHost && isAdminHost(adminHost) && (isAdminPath(pathname) || isAuthPage)) {
     const target = new URL(request.nextUrl.toString());
     target.protocol = "https:";
     target.host = adminHost;
     target.port = "";
-    target.pathname = pathname === "/login" ? "/login" : stripAdmin(pathname);
+    target.pathname = isAuthPage ? pathname : stripAdmin(pathname);
     return NextResponse.redirect(target, 308);
   }
 

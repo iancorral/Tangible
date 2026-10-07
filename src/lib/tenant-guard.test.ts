@@ -18,6 +18,7 @@ const GLOBAL_MODELS = new Set(["studio", "claimAttempt"]);
 const ALLOWED: { file: RegExp; snippet: RegExp; why: string }[] = [
   { file: /lib[\\/]auth\.ts$/, snippet: /prisma\.user\.findUnique/, why: "login: busca la cuenta por correo" },
   { file: /lib[\\/]tenant\.ts$/, snippet: /prisma\.user\.findUnique/, why: "resuelve el estudio de la propia sesión" },
+  { file: /api[\\/]account[\\/]password[\\/]route\.ts$/, snippet: /prisma\.user\./, why: "cambia la contraseña de la propia cuenta (id de la sesión)" },
 ];
 
 function walk(dir: string): string[] {
