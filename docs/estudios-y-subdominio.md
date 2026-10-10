@@ -55,3 +55,21 @@ Antes de desplegar, `npm run db:backup` guarda un respaldo completo en
 
 La sesión del panel vive en el subdominio: la primera vez hay que iniciar sesión
 de nuevo ahí.
+
+## Entrega
+
+Enlaces de entrada (cada app instalada abre el suyo):
+
+- Tania: `https://admin.studiotangible.com.mx/login?estudio=tangible`
+- Alejandra: `https://admin.studiotangible.com.mx/login?estudio=iloveme`
+
+**Tania**
+1. Borra la app vieja de su pantalla de inicio.
+2. Abre su enlace en Safari, entra con `tania@tangible.com` (su contraseña de siempre)
+   y "Compartir → Agregar a pantalla de inicio".
+
+**Alejandra**
+1. Abre su enlace en Safari, entra con `alejandra@tangible.com` y la contraseña temporal.
+2. "Compartir → Agregar a pantalla de inicio" (sale el ícono de iLoveMe).
+3. Cambia su contraseña desde el aviso del inicio cuando quiera.
+

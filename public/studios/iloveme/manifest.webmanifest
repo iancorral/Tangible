@@ -3,7 +3,7 @@
   "short_name": "iLoveMe",
   "description": "Panel de citas de iLoveMe Beauty Salon.",
   "id": "/admin?studio=iloveme",
-  "start_url": "/admin",
+  "start_url": "/login?estudio=iloveme",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -11,11 +11,34 @@
   "dir": "ltr",
   "background_color": "#FAF7F2",
   "theme_color": "#FAF7F2",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
-    { "src": "/studios/iloveme/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/studios/iloveme/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/studios/iloveme/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/studios/iloveme/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/studios/iloveme/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/studios/iloveme/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/studios/iloveme/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/studios/iloveme/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

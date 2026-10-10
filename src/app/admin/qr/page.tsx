@@ -57,7 +57,7 @@ export default function QRPage() {
     return (
       <main className="min-h-[100dvh] p-6 md:p-10 bg-salon-bg relative">
         <MuralDecorations />
-        <div className="max-w-sm mx-auto relative z-10">
+        <div className="max-w-sm lg:max-w-5xl mx-auto relative z-10">
 
         <header className="mb-8">
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
@@ -71,6 +71,8 @@ export default function QRPage() {
           </div>
         </header>
 
+        <div className="lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <div>
         {/* QR Card */}
         <div className="bg-white rounded-2xl border-2 border-salon-olive/20 shadow-folk p-8 hand-drawn text-center mb-6">
           
@@ -118,8 +120,10 @@ export default function QRPage() {
           Descargar QR
         </button>
 
+        </div>
+
         {/* STICKER NFC — Reseñas de Google */}
-        <section className="mt-10">
+        <section className="mt-10 lg:mt-0">
           <div className="flex items-center gap-3 opacity-70 mb-3">
             <div className="h-[2px] w-8 bg-salon-terracotta"></div>
             <h2 className="text-xs text-salon-terracotta font-bold tracking-widest uppercase">
@@ -227,6 +231,7 @@ export default function QRPage() {
             </div>
           </div>
         </section>
+        </div>
 
       </div>
     </main>

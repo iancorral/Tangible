@@ -112,7 +112,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     // redirect:false + navegación propia: así el destino no depende de
     // NEXTAUTH_URL (que en local puede apuntar a producción).
     await signOut({ redirect: false });
-    router.replace("/login");
+    router.replace(`/login?estudio=${studio.slug}`);
     router.refresh();
   };
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import StudioMark from "@/components/brand/StudioMark";
 import { wordmarkClass } from "@/lib/studio-brand";
+import { rememberStudio } from "@/lib/studio-hint";
 
 type LoginBrand = { slug: string; name: string; shortName: string };
 
@@ -23,6 +24,12 @@ export default function LoginForm({
 }) {
   const router = useRouter();
   const shown = brand ?? DEFAULT_BRAND;
+
+  // El login de este estudio queda como el de este dispositivo: si la sesión
+  // se cierra, al volver se ve el mismo, no el de otro estudio.
+  useEffect(() => {
+    if (brand) rememberStudio(brand.slug);
+  }, [brand]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 

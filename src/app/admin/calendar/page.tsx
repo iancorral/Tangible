@@ -202,12 +202,12 @@ function CalendarContent() {
   };
 
   return (
-    <main className="min-h-[100dvh] bg-salon-bg relative">
+    <main className="min-h-[100dvh] bg-salon-bg relative lg:h-[100dvh] lg:overflow-hidden">
       <MuralDecorations />
 
-      <div className="max-w-5xl mx-auto p-4 md:p-8 relative z-10">
+      <div className="max-w-6xl mx-auto p-4 md:p-8 lg:py-5 relative z-10 lg:flex lg:h-full lg:flex-col">
         {/* HEADER */}
-        <header className="flex items-center justify-between mb-6">
+        <header className="flex items-center justify-between mb-6 lg:mb-4 lg:shrink-0">
           <div>
             <h1 className="font-title text-2xl font-black text-salon-brown uppercase tracking-[0.15em]">
               Calendario
@@ -216,11 +216,11 @@ function CalendarContent() {
           <PrivacyToggle />
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:min-h-0 lg:flex-1">
 
           {/* CALENDARIO MENSUAL */}
-          <div className="lg:col-span-2 bg-white rounded-3xl border-2 border-salon-olive/20 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-5">
+          <div className="lg:col-span-2 bg-white rounded-3xl border-2 border-salon-olive/20 shadow-sm p-5 lg:p-4 lg:flex lg:min-h-0 lg:flex-col">
+            <div className="flex items-center justify-between mb-5 lg:mb-3 lg:shrink-0">
               <button
                 onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
                 className="w-9 h-9 rounded-xl border-2 border-salon-olive/20 flex items-center justify-center text-salon-brown hover:border-salon-olive transition-all font-black"
@@ -248,7 +248,7 @@ function CalendarContent() {
               </button>
             </div>
 
-            <div className="grid grid-cols-7 mb-2">
+            <div className="grid grid-cols-7 mb-2 lg:shrink-0">
               {DAY_HEADERS.map((d) => (
                 <div
                   key={d}
@@ -259,7 +259,7 @@ function CalendarContent() {
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1 lg:min-h-0 lg:flex-1 lg:auto-rows-fr">
               {Array.from({ length: startPadding }).map((_, i) => (
                 <div key={`pad-${i}`} />
               ))}
@@ -278,7 +278,7 @@ function CalendarContent() {
                     key={day.toString()}
                     onClick={() => setSelectedDate(day)}
                     className={`
-                      relative aspect-square flex flex-col items-center justify-start pt-1.5
+                      relative aspect-square lg:aspect-auto lg:h-full lg:min-h-0 flex flex-col items-center justify-start pt-1.5
                       rounded-xl transition-all text-sm font-bold border-2
                       ${!inMonth ? "opacity-30" : ""}
                       ${past
@@ -332,7 +332,7 @@ function CalendarContent() {
               })}
             </div>
 
-            <div className="flex gap-4 mt-4 pt-4 border-t border-salon-gray/10">
+            <div className="flex gap-4 mt-4 pt-4 lg:mt-3 lg:pt-3 lg:shrink-0 border-t border-salon-gray/10">
               {[
                 { color: "bg-salon-mustard-400", label: "Pendiente" },
                 { color: "bg-blue-400",  label: "Anticipo" },
@@ -350,9 +350,9 @@ function CalendarContent() {
           </div>
 
           {/* AGENDA DEL DÍA — fija al hacer scroll en escritorio */}
-          <div className="lg:col-span-1 lg:sticky lg:top-6 lg:self-start">
-            <div className="bg-white rounded-3xl border-2 border-salon-olive/20 shadow-sm overflow-hidden">
-              <div className={`p-4 ${isSelectedPast ? "bg-salon-gray/40" : "bg-salon-brown"}`}>
+          <div className="lg:col-span-1 lg:min-h-0">
+            <div className="bg-white rounded-3xl border-2 border-salon-olive/20 shadow-sm overflow-hidden lg:flex lg:h-full lg:flex-col">
+              <div className={`p-4 lg:shrink-0 ${isSelectedPast ? "bg-salon-gray/40" : "bg-salon-brown"}`}>
                 <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">
                   {format(selectedDate, "EEEE", { locale: es })}
                 </p>
@@ -367,7 +367,7 @@ function CalendarContent() {
               </div>
 
               {/* NOTAS DEL DÍA */}
-              <div className="px-2 pt-2">
+              <div className="px-2 pt-2 lg:shrink-0 lg:max-h-[40%] lg:overflow-y-auto">
                 {selectedDayNotes.length > 0 && (
                   <ul className="space-y-1.5 mb-1.5">
                     {selectedDayNotes.map((note) => (

@@ -203,7 +203,7 @@ export default function DayAgenda({
   const extras = confirmedApps.filter((a) => !rendered.has(a.id));
 
   return (
-    <div className="p-2 space-y-1.5 max-h-[560px] overflow-y-auto">
+    <div className="p-2 space-y-1.5 max-h-[560px] overflow-y-auto overscroll-contain lg:max-h-none lg:min-h-0 lg:flex-1">
       {isDayOff && (
         <div className="bg-salon-blush/20 border border-salon-pink/30 rounded-xl px-3 py-2 text-[10px] text-salon-brown font-bold text-center mb-1">
           Día cerrado al público — puedes agendar manualmente
