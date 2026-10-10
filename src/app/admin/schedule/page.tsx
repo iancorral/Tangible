@@ -162,7 +162,7 @@ export default function SchedulePage() {
   return (
     <main className="min-h-[100dvh] p-4 md:p-10 bg-salon-bg relative">
       <MuralDecorations />
-      <div className="max-w-2xl mx-auto relative z-10">
+      <div className="max-w-2xl lg:max-w-6xl mx-auto relative z-10">
 
         <header className="mb-8">
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
@@ -176,8 +176,10 @@ export default function SchedulePage() {
           </div>
         </header>
 
+        {/* En escritorio, dos columnas para que todo quepa sin scroll. */}
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
         {/* Horario semanal */}
-        <section className="bg-white rounded-2xl border-2 border-salon-olive/20 shadow-folk p-4 md:p-6 mb-6">
+        <section className="bg-white rounded-2xl border-2 border-salon-olive/20 shadow-folk p-4 md:p-6 mb-6 lg:mb-0">
           <h2 className="text-xs font-black text-salon-olive uppercase tracking-widest mb-1">
             Horario semanal base
           </h2>
@@ -194,7 +196,7 @@ export default function SchedulePage() {
               {schedule.map((day) => (
                 <div
                   key={day.dayOfWeek}
-                  className={`flex items-center gap-2 p-2.5 sm:p-3 rounded-xl border transition-all ${
+                  className={`flex flex-wrap items-center gap-2 p-2.5 sm:flex-nowrap sm:p-3 rounded-xl border transition-all ${
                     day.isDayOff ? "bg-gray-50 border-gray-200 opacity-60" : "bg-salon-bg border-salon-olive/20"
                   }`}
                 >
@@ -212,21 +214,21 @@ export default function SchedulePage() {
                   </span>
 
                   {!day.isDayOff ? (
-                    // Los inputs comparten el espacio disponible (flex-1) y se
-                    // encogen sin desbordar en pantallas estrechas.
-                    <div className="flex items-center gap-1.5 sm:gap-1 flex-1 min-w-0">
+                    // En celular las horas bajan a su propio renglón (alineadas con
+                    // el nombre del día) para que se lean completas.
+                    <div className="flex basis-full items-center gap-1.5 pl-11 sm:basis-auto sm:flex-1 sm:gap-1 sm:pl-0 min-w-0">
                       <input
                         type="time"
                         value={day.startTime}
                         onChange={(e) => updateDay(day.dayOfWeek, "startTime", e.target.value)}
-                        className="border-2 border-salon-olive/30 rounded-lg px-2 py-1.5 sm:py-1 text-sm text-salon-brown font-bold focus:border-salon-olive outline-none bg-white flex-1 min-w-0 max-w-[130px] sm:max-w-[110px]"
+                        className="border-2 border-salon-olive/30 rounded-lg px-2 py-1.5 sm:py-1 text-sm text-salon-brown font-bold focus:border-salon-olive outline-none bg-white flex-1 min-w-0 sm:max-w-[138px]"
                       />
                       <span className="text-salon-gray text-xs font-bold shrink-0">a</span>
                       <input
                         type="time"
                         value={day.endTime}
                         onChange={(e) => updateDay(day.dayOfWeek, "endTime", e.target.value)}
-                        className="border-2 border-salon-olive/30 rounded-lg px-2 py-1.5 sm:py-1 text-sm text-salon-brown font-bold focus:border-salon-olive outline-none bg-white flex-1 min-w-0 max-w-[130px] sm:max-w-[110px]"
+                        className="border-2 border-salon-olive/30 rounded-lg px-2 py-1.5 sm:py-1 text-sm text-salon-brown font-bold focus:border-salon-olive outline-none bg-white flex-1 min-w-0 sm:max-w-[138px]"
                       />
                     </div>
                   ) : (
@@ -246,6 +248,7 @@ export default function SchedulePage() {
           </button>
         </section>
 
+        <div>
         {/* Horarios específicos por fecha */}
         <section className="bg-white rounded-2xl border-2 border-salon-lavender/30 shadow-folk p-4 md:p-6 mb-6">
           <h2 className="text-xs font-black text-salon-lavender uppercase tracking-widest mb-1">
@@ -403,6 +406,8 @@ export default function SchedulePage() {
             </div>
           )}
         </section>
+        </div>
+        </div>
 
       </div>
     </main>

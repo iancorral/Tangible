@@ -3,6 +3,8 @@ import { formatChihuahuaDate, formatChihuahuaTime } from "@/lib/timezone";
 
 export type AppointmentMessageData = {
   clientName: string;
+  /** Nombre del estudio que escribe ("Tangible", "iLoveMe"). */
+  studioName?: string;
   date: Date | string;
   serviceNames: string[];
 };
@@ -39,7 +41,7 @@ function appointmentLines(a: AppointmentMessageData): string[] {
 
 export function buildConfirmationMessage(a: AppointmentMessageData): string {
   return [
-    `Hola ${firstName(a.clientName)}, te escribo de Tangible!`,
+    `Hola ${firstName(a.clientName)}, te escribo de ${a.studioName ?? "Tangible"}!`,
     ``,
     `Tu cita ha quedado agendada:`,
     ``,

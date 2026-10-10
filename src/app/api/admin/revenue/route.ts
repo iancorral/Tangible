@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CHIHUAHUA_UTC_OFFSET, chihuahuaToUTC, getChihuahuaParts } from "@/lib/timezone";
@@ -13,8 +12,9 @@ import {
 } from "@/lib/pricing";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { searchParams } = new URL(req.url);
   const period = searchParams.get("period") === "month" ? "month" : "week";
@@ -50,6 +50,7 @@ export async function GET(req: Request) {
 
   const appointments = await prisma.appointment.findMany({
     where: {
+      studioId,
       status: "CONFIRMED",
       date: { gte: start, lt: end },
     },

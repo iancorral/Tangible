@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { getAppointmentAmount } from "@/lib/pricing";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -19,23 +18,22 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!OBJECT_ID.test(id)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const customer = await prisma.customer.findUnique({ where: { id } });
+  const customer = await prisma.customer.findUnique({ where: { id, studioId } });
   if (!customer) {
     return NextResponse.json({ error: "Clienta no encontrada" }, { status: 404 });
   }
 
   const appointments = await prisma.appointment.findMany({
-    where: { customerId: id },
+    where: { studioId, customerId: id },
     include: { services: true },
     orderBy: { date: "desc" },
   });
@@ -60,10 +58,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { id } = await params;
   if (!OBJECT_ID.test(id)) {
@@ -87,13 +84,13 @@ export async function PATCH(
     // resolving it means moving appointment history between records, which the
     // owner has to ask for on purpose — never as a side effect of an edit.
     const holder = await prisma.customer.findUnique({
-      where: { phone },
+      where: { studioId_phone: { studioId, phone } },
       select: { id: true, name: true },
     });
 
     if (holder && holder.id !== id) {
       const visits = await prisma.appointment.count({
-        where: { customerId: holder.id, status: { not: "CANCELLED" } },
+        where: { studioId, customerId: holder.id, status: { not: "CANCELLED" } },
       });
       return NextResponse.json(
         {
@@ -107,7 +104,7 @@ export async function PATCH(
     const notes = validation.data.notes?.trim();
 
     const updated = await prisma.customer.update({
-      where: { id },
+      where: { id, studioId },
       data: {
         name: validation.data.name,
         phone,

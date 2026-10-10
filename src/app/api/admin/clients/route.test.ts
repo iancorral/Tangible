@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
+  studio: { findUnique: vi.fn() },
+  user: { findUnique: vi.fn() },
   customer: { findMany: vi.fn() },
   appointment: { groupBy: vi.fn(), findMany: vi.fn(), count: vi.fn() },
 }));
@@ -11,6 +13,10 @@ vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: sessionMock }));
 
 import { GET } from "./route";
+
+const STUDIO_ID = "6a00000000000000000000aa";
+const STUDIO = { id: STUDIO_ID, slug: "tangible", name: "Tangible", shortName: "Tangible", logoPath: null, features: { rewards: true, publicBooking: true } };
+
 
 const customers = [
   { id: "1", name: "Dania Peña", phone: "6142708576", createdAt: new Date("2026-08-08") },
@@ -25,7 +31,9 @@ const search = async (q: string) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sessionMock.mockResolvedValue({ user: { email: "admin@test" } });
+  sessionMock.mockResolvedValue({ user: { id: "user-tania", email: "tania@test", name: "Tania", studioId: STUDIO_ID } });
+  prismaMock.studio.findUnique.mockResolvedValue(STUDIO);
+  prismaMock.user.findUnique.mockResolvedValue({ studioId: STUDIO_ID, email: "tania@test", name: "Tania", mustChangePassword: false, passwordChangedAt: null });
   prismaMock.customer.findMany.mockResolvedValue(customers);
   prismaMock.appointment.groupBy.mockResolvedValue([]);
 });

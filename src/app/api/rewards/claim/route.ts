@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PASS_COOKIE, PASS_COOKIE_OPTIONS, createDevicePass } from "@/lib/rewards-access";
 import { allowClaimAttempt, clientIp, consumeClaimCode } from "@/lib/rewards.server";
+import { getPublicStudio, hasFeature } from "@/lib/tenant";
 import { z } from "zod";
 
 const schema = z.object({
@@ -46,7 +47,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await consumeClaimCode(validation.data.code);
+    const studio = await getPublicStudio();
+    if (!studio || !hasFeature(studio, "rewards")) {
+      return NextResponse.json({ error: GENERIC }, { status: 400 });
+    }
+
+    const result = await consumeClaimCode(studio.id, validation.data.code);
     if (!result.ok) {
       return NextResponse.json({ error: GENERIC }, { status: 400 });
     }

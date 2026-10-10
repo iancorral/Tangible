@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { getAppointmentAmount, isFreeAmount } from "@/lib/pricing";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { searchParams } = new URL(req.url);
   const period = searchParams.get("period") ?? "week";
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const end = period === "week" ? endOfWeek(now, { weekStartsOn: 1 }) : endOfMonth(now);
 
   const appointments = await prisma.appointment.findMany({
-    where: { date: { gte: start, lte: end } },
+    where: { studioId, date: { gte: start, lte: end } },
     include: { services: true },
   });
 

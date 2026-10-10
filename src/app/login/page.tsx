@@ -1,94 +1,56 @@
-"use client";
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import LoginForm from "@/components/auth/LoginForm";
+import { prisma } from "@/lib/prisma";
+import { STUDIO_HINT_COOKIE } from "@/lib/studio-hint";
+import { getAdminBase } from "@/lib/admin-path.server";
+import { adminHref } from "@/lib/admin-path";
+import { getPanelSession } from "@/lib/tenant";
+import { adminPwaMetadata, studioPwaMetadata } from "@/lib/pwa-metadata";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import MuralDecorations from "@/components/layout/MuralDecorations";
+const SLUG = /^[a-z0-9-]+$/;
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+/**
+ * Marca del login (solo apariencia; el estudio real sale de la cuenta):
+ *   1. ?studio=<slug>: el enlace propio de cada estudio y su app instalada.
+ *   2. La cookie del último estudio que entró en este dispositivo.
+ *   3. Tangible.
+ */
+async function loginBrand(param: string | undefined) {
+  const fromCookie = (await cookies()).get(STUDIO_HINT_COOKIE)?.value;
+  for (const slug of [param, fromCookie]) {
+    if (!slug || !SLUG.test(slug)) continue;
+    const studio = await prisma.studio
+      .findUnique({ where: { slug }, select: { slug: true, name: true, shortName: true } })
+      .catch(() => null);
+    if (studio) return studio;
+  }
+  return null;
+}
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+type Props = { searchParams: Promise<{ cambiada?: string; studio?: string }> };
 
-    const formData = new FormData(e.currentTarget);
-    const result = await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirect: false,
-    });
+// Ícono y nombre de la app instalada según el estudio del enlace: agregar a la
+// pantalla de inicio desde /login?studio=iloveme instala "iLoveMe".
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const brand = await loginBrand((await searchParams).studio);
+  return brand
+    ? { ...studioPwaMetadata(brand), title: { absolute: `${brand.shortName} · Entrar` } }
+    : adminPwaMetadata;
+}
 
-    if (result?.error) {
-      setError("Credenciales incorrectas");
-      setLoading(false);
-    } else {
-      router.push("/admin");
-    }
-  };
+export default async function LoginPage({ searchParams }: Props) {
+  const home = adminHref(await getAdminBase(), "/");
+  // Con sesión abierta no hay nada que hacer aquí: directo a su panel.
+  if (await getPanelSession()) redirect(home);
 
+  const { cambiada, studio } = await searchParams;
   return (
-    <main className="min-h-screen flex items-center justify-center bg-salon-bg p-6 relative">
-      <MuralDecorations />
-      <div className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-sm rounded-3xl border-2 border-salon-olive/30 shadow-folk p-8 hand-drawn">
-        <div className="text-center mb-8">
-          <h1 className="font-title text-2xl font-black text-salon-brown tracking-[0.3em] uppercase">
-            Tangible
-          </h1>
-          <div className="flex items-center justify-center gap-3 mt-1 opacity-70">
-            <div className="h-[2px] w-6 bg-salon-terracotta rounded-full" />
-            <p className="text-salon-terracotta text-[10px] uppercase tracking-[0.2em] font-bold">
-              Panel Admin
-            </p>
-            <div className="h-[2px] w-6 bg-salon-terracotta rounded-full" />
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold text-salon-terracotta uppercase tracking-widest mb-2">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              required
-              className="w-full bg-white border-2 border-salon-gray/30 px-4 py-3 text-salon-brown focus:border-salon-lavender focus:ring-0 outline-none transition-all hand-drawn placeholder:text-salon-gray/40 font-medium"
-              placeholder="admin@tangible.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-salon-terracotta uppercase tracking-widest mb-2">
-              Contraseña
-            </label>
-            <input
-              name="password"
-              type="password"
-              required
-              className="w-full bg-white border-2 border-salon-gray/30 px-4 py-3 text-salon-brown focus:border-salon-lavender focus:ring-0 outline-none transition-all hand-drawn placeholder:text-salon-gray/40 font-medium"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-500 font-bold text-center bg-red-50 py-2 rounded-lg">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 bg-salon-brown text-salon-blush py-4 px-6 font-black text-sm uppercase tracking-widest shadow-folk transform active:scale-[0.98] transition-all disabled:opacity-50 hand-drawn border-2 border-salon-brown hover:bg-salon-brown/90 rounded-xl"
-          >
-            {loading ? "Entrando..." : "Entrar al panel"}
-          </button>
-        </form>
-      </div>
-    </main>
+    <LoginForm
+      brand={await loginBrand(studio)}
+      homeHref={home}
+      notice={cambiada ? "Listo, tu contraseña quedó guardada. Entra con la nueva." : null}
+    />
   );
 }

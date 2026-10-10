@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { PASS_COOKIE, readDevicePass } from "@/lib/rewards-access";
 import { getStampBalance } from "@/lib/rewards.server";
+import { getPublicStudio } from "@/lib/tenant";
 
 // Reads a cookie and a live balance; never cache it.
 export const dynamic = "force-dynamic";
@@ -21,8 +22,11 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const studio = await getPublicStudio();
+  if (!studio) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   return NextResponse.json(
-    { stamps: await getStampBalance(customerId) },
+    { stamps: await getStampBalance(studio.id, customerId) },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

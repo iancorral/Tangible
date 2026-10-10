@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { hasFeature, requireStudio } from "@/lib/tenant";
 import { REWARD_TYPES } from "@/lib/rewards";
 import { getRewardProgram, updateRewardProgram } from "@/lib/rewards.server";
 import { z } from "zod";
@@ -18,18 +17,22 @@ const programSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
-  return NextResponse.json(await getRewardProgram());
+  return NextResponse.json(await getRewardProgram(studioId));
 }
 
 export async function PUT(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   try {
@@ -49,7 +52,7 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json(
-      await updateRewardProgram({
+      await updateRewardProgram(studioId, {
         ...data,
         termsNote: data.termsNote?.trim() || null,
         rewardLabel: data.rewardLabel.trim(),

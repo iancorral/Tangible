@@ -15,31 +15,29 @@ import {
   normalizeClaimCode,
 } from "@/lib/rewards-access";
 
-/** Only ever one program document; this is the row it lives in. */
-const PROGRAM_KEY = "default";
-
-/** Reads the program, creating it with the defaults on first use. */
-export async function getRewardProgram(): Promise<RewardProgram> {
+/** Reads the studio's program, creating it with the defaults on first use. */
+export async function getRewardProgram(studioId: string): Promise<RewardProgram> {
   return prisma.rewardProgram.upsert({
-    where: { key: PROGRAM_KEY },
+    where: { studioId },
     update: {},
-    create: { key: PROGRAM_KEY },
+    create: { studioId },
   });
 }
 
 export async function updateRewardProgram(
+  studioId: string,
   data: Prisma.RewardProgramUpdateInput
 ): Promise<RewardProgram> {
   return prisma.rewardProgram.upsert({
-    where: { key: PROGRAM_KEY },
+    where: { studioId },
     update: data,
-    create: { key: PROGRAM_KEY, ...(data as Prisma.RewardProgramCreateInput) },
+    create: { ...(data as Prisma.RewardProgramUncheckedCreateInput), studioId },
   });
 }
 
 /** Unspent stamps for one customer. The balance is always derived, never stored. */
-export async function getStampBalance(customerId: string): Promise<number> {
-  return prisma.stamp.count({ where: { customerId, ...UNSPENT_STAMP } });
+export async function getStampBalance(studioId: string, customerId: string): Promise<number> {
+  return prisma.stamp.count({ where: { studioId, customerId, ...UNSPENT_STAMP } });
 }
 
 // ── Enrollment ─────────────────────────────────────────────────────────────
@@ -51,11 +49,12 @@ export async function getStampBalance(customerId: string): Promise<number> {
  * Returns the plaintext exactly once; only its hash is stored.
  */
 export async function issueClaimCode(
+  studioId: string,
   customerId: string,
   createdBy: string
 ): Promise<{ code: string; expiresAt: Date }> {
   await prisma.claimCode.updateMany({
-    where: { customerId, consumedAt: null },
+    where: { studioId, customerId, consumedAt: null },
     data: { expiresAt: new Date(0) },
   });
 
@@ -68,6 +67,7 @@ export async function issueClaimCode(
     try {
       await prisma.claimCode.create({
         data: {
+          studioId,
           codeHash: hashClaimCode(code),
           customerId,
           expiresAt,
@@ -94,12 +94,13 @@ export type ClaimResult =
  * only flips to consumed if it is still unconsumed, so two people racing the
  * same code cannot both enrol.
  */
-export async function consumeClaimCode(raw: string): Promise<ClaimResult> {
+export async function consumeClaimCode(studioId: string, raw: string): Promise<ClaimResult> {
   const code = normalizeClaimCode(raw);
   if (code.length !== 6) return { ok: false, reason: "INVALID" };
 
+  // Un código de otro estudio no se encuentra: igual que uno inexistente.
   const record = await prisma.claimCode.findUnique({
-    where: { codeHash: hashClaimCode(code) },
+    where: { codeHash: hashClaimCode(code), studioId },
   });
   if (!record) return { ok: false, reason: "INVALID" };
 
@@ -108,14 +109,14 @@ export async function consumeClaimCode(raw: string): Promise<ClaimResult> {
 
   if (record.expiresAt.getTime() < Date.now()) {
     await prisma.claimCode.update({
-      where: { id: record.id },
+      where: { id: record.id, studioId },
       data: { attempts: { increment: 1 } },
     });
     return { ok: false, reason: "EXPIRED" };
   }
 
   const claimed = await prisma.claimCode.updateMany({
-    where: { id: record.id, consumedAt: null },
+    where: { id: record.id, studioId, consumedAt: null },
     data: { consumedAt: new Date() },
   });
   if (claimed.count === 0) return { ok: false, reason: "USED" };
@@ -129,6 +130,7 @@ export async function consumeClaimCode(raw: string): Promise<ClaimResult> {
   await prisma.customer.updateMany({
     where: {
       id: record.customerId,
+      studioId,
       OR: [{ joinedAt: null }, { joinedAt: { isSet: false } }],
     },
     data: { joinedAt: new Date() },

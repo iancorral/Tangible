@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { chihuahuaToUTC, utcDateToChihuahuaMinutes, minutesToTimeLabel } from "@/lib/timezone";
 import { z } from "zod";
 
@@ -11,8 +10,9 @@ const querySchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const { searchParams } = new URL(req.url);
   const validation = querySchema.safeParse({
@@ -31,10 +31,11 @@ export async function GET(req: Request) {
   const dayEnd = chihuahuaToUTC(year, month, day + 1, 0, 0);
 
   const [override, schedule, appts] = await Promise.all([
-    prisma.availabilityOverride.findFirst({ where: { date: { gte: dayStart, lt: dayEnd } } }),
-    prisma.workSchedule.findFirst({ where: { dayOfWeek } }),
+    prisma.availabilityOverride.findFirst({ where: { studioId, date: { gte: dayStart, lt: dayEnd } } }),
+    prisma.workSchedule.findFirst({ where: { studioId, dayOfWeek } }),
     prisma.appointment.findMany({
       where: {
+        studioId,
         status: "CONFIRMED",
         ...(excludeId ? { id: { not: excludeId } } : {}),
         OR: [

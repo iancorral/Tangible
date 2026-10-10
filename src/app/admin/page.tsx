@@ -10,7 +10,9 @@ import WhatsAppIcon from '@/components/icons/WhatsAppIcon';
 import { SensitiveAmount } from '@/components/privacy';
 import { getAppointmentAmount, isFreeAmount } from '@/lib/pricing';
 import { buildReminderUrl } from '@/lib/whatsapp';
-import { OWNER_NAME } from '@/lib/config/business';
+import { useAdminHref, useStudio } from '@/components/admin/StudioContext';
+import StudioMark from '@/components/brand/StudioMark';
+import { wordmarkClass } from '@/lib/studio-brand';
 import {
   formatChihuahuaTime,
   formatChihuahuaDate,
@@ -66,6 +68,8 @@ const TABS: { id: AppointmentTab; label: string; activeClasses: string; empty: s
 ];
 
 export default function AdminDashboard() {
+  const adminPath = useAdminHref();
+  const studio = useStudio();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filter, setFilter] = useState<AppointmentTab>('UPCOMING');
   const [loading, setLoading] = useState(true);
@@ -199,6 +203,13 @@ export default function AdminDashboard() {
         {/* ENCABEZADO */}
         <header className="mb-5 flex items-end justify-between gap-4">
           <div className="min-w-0">
+            {/* Marca del estudio en celular; en escritorio vive en la barra lateral. */}
+            <div className="mb-4 flex items-center gap-2.5 lg:hidden">
+              <StudioMark slug={studio.slug} name={studio.name} size={38} />
+              <span className={`text-[13px] font-black text-salon-brown ${wordmarkClass(studio.slug)}`}>
+                {studio.shortName}
+              </span>
+            </div>
             <p suppressHydrationWarning className="text-[11px] font-bold uppercase tracking-[0.2em] text-salon-terracotta">
               {formatChihuahuaDate(now)}
             </p>
@@ -206,12 +217,12 @@ export default function AdminDashboard() {
                 junto al botón; desde sm cabe en una sola. */}
             <h1 suppressHydrationWarning className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.12em] leading-tight mt-1">
               <span className="block sm:inline">{greeting},</span>{' '}
-              <span className="block sm:inline text-salon-terracotta">{OWNER_NAME}</span>
+              <span className="block sm:inline text-salon-terracotta">{studio.firstName}</span>
             </h1>
           </div>
           {/* En celular es un botón redondo para dejarle el ancho al saludo. */}
           <Link
-            href="/admin/calendar?new=1"
+            href={adminPath("/calendar?new=1")}
             aria-label="Nueva cita"
             className="shrink-0 inline-flex h-12 w-12 items-center justify-center gap-2 rounded-full bg-salon-brown text-white shadow-md transition-colors hover:bg-salon-brown/90 active:scale-[0.96] sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[11px] sm:font-black sm:uppercase sm:tracking-widest"
           >
@@ -222,10 +233,31 @@ export default function AdminDashboard() {
           </Link>
         </header>
 
+        {/* Sin botón de cerrar a propósito: un aviso que se puede descartar nadie
+            lo atiende. Desaparece solo cuando se cambia la contraseña. */}
+        {studio.temporaryPassword && (
+          <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-salon-mustard-200 bg-salon-mustard-50 px-4 py-3 sm:items-center">
+            <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-salon-mustard-400/20 text-salon-mustard-700">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="7.5" cy="15.5" r="5.5" />
+                <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+              <p className="text-sm leading-snug text-salon-mustard-700 sm:flex-1">
+                Entraste con una contraseña temporal. Cámbiala para que tu panel sea privado.
+              </p>
+              <Link href="/cambiar-contrasena" className="mt-1 inline-block text-sm font-bold text-salon-mustard-700 underline underline-offset-4 sm:mt-0 sm:shrink-0">
+                Cambiar contraseña
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* HOY */}
         {!loading && (
           <Link
-            href={`/admin/calendar?date=${todayKey}`}
+            href={adminPath(`/calendar?date=${todayKey}`)}
             className="mb-6 flex items-center gap-4 rounded-3xl border-2 border-salon-olive/15 bg-white/90 p-4 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md"
           >
             <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-salon-olive text-white">
@@ -395,7 +427,7 @@ export default function AdminDashboard() {
                         return (
                           <li key={app.id}>
                             <Link
-                              href={`/admin/calendar?date=${group.key}`}
+                              href={adminPath(`/calendar?date=${group.key}`)}
                               className={`flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-salon-bg/60 active:bg-salon-bg ${
                                 app.status === 'CANCELLED' ? 'opacity-60' : ''
                               }`}

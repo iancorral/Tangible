@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PrivacyToggle, SensitiveAmount } from "@/components/privacy";
+import { useAdminHref } from "@/components/admin/StudioContext";
 
 type Metrics = {
   period: string;
@@ -17,6 +18,7 @@ type Metrics = {
 
 /** "row": 4 tarjetas en fila (pantalla completa). "rail": 2×2 para la columna lateral. */
 export default function MetricsDashboard({ layout = "row" }: { layout?: "row" | "rail" }) {
+  const adminPath = useAdminHref();
   const grid = layout === "rail" ? "grid grid-cols-2 gap-3" : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4";
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [period, setPeriod] = useState<"week" | "month">("week");
@@ -70,7 +72,7 @@ export default function MetricsDashboard({ layout = "row" }: { layout?: "row" | 
         <>
           <div className={grid}>
             <a
-              href={`/admin/revenue?period=${period}`}
+              href={adminPath(`/revenue?period=${period}`)}
               className="bg-white rounded-3xl border-2 border-salon-olive/20 p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 group block"
             >
               <p className="text-[10px] uppercase tracking-wider text-salon-gray font-bold mb-1">Ingresos</p>

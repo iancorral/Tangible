@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { hasFeature, requireStudio } from "@/lib/tenant";
 import { UNSPENT_STAMP } from "@/lib/rewards";
 import { getRewardProgram, getStampBalance } from "@/lib/rewards.server";
 import { z } from "zod";
@@ -25,9 +24,11 @@ const stampSchema = z.object({
  * the record.
  */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   try {
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
     const { customerId, action, note } = validation.data;
 
     const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
+      where: { id: customerId, studioId },
       select: { id: true },
     });
     if (!customer) {
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
     if (action === "ADD") {
       await prisma.stamp.create({
         data: {
+          studioId,
           customerId,
           dedupeKey: `manual:${randomUUID()}`,
           source: "MANUAL",
@@ -56,12 +58,12 @@ export async function POST(req: Request) {
           // UNSPENT_STAMP in lib/rewards.ts for why that matters on MongoDB.
           redemptionId: null,
           note: note?.trim() || null,
-          createdBy: session.user?.email ?? "admin",
+          createdBy: ctx.email,
         },
       });
     } else {
       const newest = await prisma.stamp.findFirst({
-        where: { customerId, ...UNSPENT_STAMP },
+        where: { studioId, customerId, ...UNSPENT_STAMP },
         orderBy: { earnedAt: "desc" },
         select: { id: true },
       });
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
       // Guarded by the same filter so a stamp redeemed a moment ago cannot be
       // deleted out from under the redemption that spent it.
       const deleted = await prisma.stamp.deleteMany({
-        where: { id: newest.id, ...UNSPENT_STAMP },
+        where: { studioId, id: newest.id, ...UNSPENT_STAMP },
       });
       if (deleted.count === 0) {
         return NextResponse.json({ error: "Intenta de nuevo" }, { status: 409 });
@@ -84,8 +86,8 @@ export async function POST(req: Request) {
     }
 
     const [stamps, program] = await Promise.all([
-      getStampBalance(customerId),
-      getRewardProgram(),
+      getStampBalance(studioId, customerId),
+      getRewardProgram(studioId),
     ]);
 
     return NextResponse.json({ stamps, ready: stamps >= program.stampsRequired });

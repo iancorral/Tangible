@@ -19,6 +19,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { PrismaClient } from "@prisma/client";
+import { resolveStudioArg } from "./lib/studio";
 
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes("--apply");
@@ -31,11 +32,12 @@ function label(date: Date) {
   return new Date(date.getTime() - 6 * 3600000).toISOString().slice(0, 16).replace("T", " ");
 }
 
-async function listCandidates() {
+async function listCandidates(studioId: string) {
   const candidates = await prisma.appointment.findMany({
     // En MongoDB `null` no incluye documentos donde el campo ni existe, y las
     // citas anteriores a estos campos no los tienen.
     where: {
+      studioId,
       AND: [
         { OR: [{ customerId: null }, { customerId: { isSet: false } }] },
         { OR: [{ clientPhone: null }, { clientPhone: { isSet: false } }] },
@@ -53,7 +55,8 @@ async function listCandidates() {
 }
 
 async function main() {
-  if (IDS.length === 0) return listCandidates();
+  const { id: studioId } = await resolveStudioArg(prisma);
+  if (IDS.length === 0) return listCandidates(studioId);
 
   const invalid = IDS.filter((id) => !OBJECT_ID.test(id));
   if (invalid.length) throw new Error(`IDs inválidos: ${invalid.join(", ")}`);
@@ -61,7 +64,7 @@ async function main() {
   console.log(APPLY ? "APPLY — se escribirán cambios\n" : "SIMULACRO — no se escribe nada\n");
 
   const appointments = await prisma.appointment.findMany({
-    where: { id: { in: IDS } },
+    where: { id: { in: IDS }, studioId },
     include: { services: { select: { name: true } } },
   });
 
@@ -99,6 +102,7 @@ async function main() {
         allDay: false,
         blocksSchedule: !cancelled && a.endDate > now,
         createdBy: "migración citas→notas",
+        studioId,
       },
     };
   });

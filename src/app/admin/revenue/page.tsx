@@ -82,7 +82,7 @@ function RevenueContent() {
   return (
     <main className="min-h-[100dvh] p-4 md:p-10 bg-salon-bg relative">
       <MuralDecorations />
-      <div className="max-w-2xl mx-auto relative z-10">
+      <div className="max-w-2xl lg:max-w-5xl mx-auto relative z-10">
 
         <header className="mb-8">
           <h1 className="font-title text-2xl sm:text-3xl font-black text-salon-brown uppercase tracking-[0.15em] mb-1">
@@ -179,7 +179,8 @@ function RevenueContent() {
               </p>
             </div>
 
-            <div className="space-y-4">
+            {/* Formas de pago lado a lado en escritorio. */}
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
               {groups.map(({ bucket, label, color, border, text, entries, total }) => {
                 if (entries.length === 0) return null;
                 const isFree = bucket === "FREE";

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { hasFeature, requireStudio } from "@/lib/tenant";
 import { getAppointmentAmount } from "@/lib/pricing";
 import { UNSPENT_STAMP, computeRewardAmount } from "@/lib/rewards";
 import { getRewardProgram, getStampBalance } from "@/lib/rewards.server";
@@ -25,11 +24,11 @@ const stampKey = (appointmentId: string) => `appt:${appointmentId}`;
  * single request: whether a stamp can be given, whether one already was, the
  * client's balance, and what the reward would be worth against this bill.
  */
-async function readState(appointmentId: string) {
+async function readState(studioId: string, appointmentId: string) {
   const [program, appointment] = await Promise.all([
-    getRewardProgram(),
+    getRewardProgram(studioId),
     prisma.appointment.findUnique({
-      where: { id: appointmentId },
+      where: { id: appointmentId, studioId },
       include: {
         services: true,
         customer: { select: { id: true, name: true, joinedAt: true } },
@@ -43,11 +42,11 @@ async function readState(appointmentId: string) {
 
   const [stamp, redemption] = await Promise.all([
     prisma.stamp.findUnique({
-      where: { dedupeKey: stampKey(appointmentId) },
+      where: { dedupeKey: stampKey(appointmentId), studioId },
       select: { id: true, redemptionId: true },
     }),
     prisma.redemption.findUnique({
-      where: { dedupeKey: stampKey(appointmentId) },
+      where: { dedupeKey: stampKey(appointmentId), studioId },
       select: { id: true, amountApplied: true, rewardLabel: true },
     }),
   ]);
@@ -63,7 +62,7 @@ async function readState(appointmentId: string) {
   else if (baseAmount <= 0) blocker = "FREE";
 
   const stamps = appointment.customerId
-    ? await getStampBalance(appointment.customerId)
+    ? await getStampBalance(studioId, appointment.customerId)
     : 0;
 
   return {
@@ -86,9 +85,11 @@ async function readState(appointmentId: string) {
 }
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   const appointmentId = new URL(req.url).searchParams.get("appointmentId") ?? "";
@@ -96,7 +97,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const state = await readState(appointmentId);
+  const state = await readState(studioId, appointmentId);
   if (!state) {
     return NextResponse.json({ error: "Cita no encontrada" }, { status: 404 });
   }
@@ -113,9 +114,11 @@ export async function GET(req: Request) {
  * all converge on exactly one stamp.
  */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
   }
 
   try {
@@ -125,7 +128,7 @@ export async function POST(req: Request) {
     }
 
     const { appointmentId, action } = validation.data;
-    const state = await readState(appointmentId);
+    const state = await readState(studioId, appointmentId);
     if (!state) {
       return NextResponse.json({ error: "Cita no encontrada" }, { status: 404 });
     }
@@ -151,6 +154,7 @@ export async function POST(req: Request) {
       try {
         await prisma.stamp.create({
           data: {
+            studioId,
             customerId: state.customer!.id,
             dedupeKey: stampKey(appointmentId),
             source: "APPOINTMENT",
@@ -158,7 +162,7 @@ export async function POST(req: Request) {
             // Written explicitly so the field is present, not absent. See
             // UNSPENT_STAMP in lib/rewards.ts for why that matters on MongoDB.
             redemptionId: null,
-            createdBy: session.user?.email ?? "admin",
+            createdBy: ctx.email,
           },
         });
       } catch (error) {
@@ -175,7 +179,7 @@ export async function POST(req: Request) {
       // Only an unspent stamp can be taken back: one already consumed by a
       // reward stays put, or the reward would be worth more than it cost.
       const removed = await prisma.stamp.deleteMany({
-        where: { dedupeKey: stampKey(appointmentId), ...UNSPENT_STAMP },
+        where: { studioId, dedupeKey: stampKey(appointmentId), ...UNSPENT_STAMP },
       });
       if (removed.count === 0 && state.stampGranted) {
         return NextResponse.json(
@@ -185,7 +189,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json(await readState(appointmentId));
+    return NextResponse.json(await readState(studioId, appointmentId));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { z } from "zod";
 import { chihuahuaToUTC, CHIHUAHUA_UTC_OFFSET } from "@/lib/timezone";
 
@@ -38,8 +37,9 @@ function serializeOverride(o: {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const now = new Date();
   const chihuahuaNow = new Date(now.getTime() - CHIHUAHUA_UTC_OFFSET * 3600000);
@@ -49,7 +49,7 @@ export async function GET() {
   const todayStart = chihuahuaToUTC(y, m, d, 0, 0);
 
   const overrides = await prisma.availabilityOverride.findMany({
-    where: { date: { gte: todayStart } },
+    where: { studioId, date: { gte: todayStart } },
     orderBy: { date: "asc" },
   });
 
@@ -57,8 +57,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const body = await req.json();
   const validation = createSchema.safeParse(body);
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   const dayEnd = chihuahuaToUTC(year, month, day + 1, 0, 0);
 
   const existing = await prisma.availabilityOverride.findFirst({
-    where: { date: { gte: dayStart, lt: dayEnd } },
+    where: { studioId, date: { gte: dayStart, lt: dayEnd } },
   });
 
   const data = {
@@ -83,10 +84,10 @@ export async function POST(req: Request) {
 
   let override;
   if (existing) {
-    override = await prisma.availabilityOverride.update({ where: { id: existing.id }, data });
+    override = await prisma.availabilityOverride.update({ where: { id: existing.id, studioId }, data });
   } else {
     override = await prisma.availabilityOverride.create({
-      data: { date: new Date(year, month - 1, day, 12, 0, 0), ...data },
+      data: { studioId, date: new Date(year, month - 1, day, 12, 0, 0), ...data },
     });
   }
 
@@ -94,13 +95,18 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   const body = await req.json();
   const validation = deleteSchema.safeParse(body);
   if (!validation.success) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-  await prisma.availabilityOverride.delete({ where: { id: validation.data.id } });
+  // deleteMany con studioId: un ID de otro estudio simplemente no borra nada.
+  const { count } = await prisma.availabilityOverride.deleteMany({
+    where: { id: validation.data.id, studioId },
+  });
+  if (count === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

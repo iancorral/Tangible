@@ -15,6 +15,7 @@ import { normalizePhone } from "@/lib/phone";
  * the owner's corrections every time someone typed a nickname into the form.
  */
 export async function resolveCustomerId(
+  studioId: string,
   clientName: string,
   clientPhone: string | null | undefined
 ): Promise<string | null> {
@@ -25,13 +26,13 @@ export async function resolveCustomerId(
   if (!name) return null;
 
   const existing = await prisma.customer.findUnique({
-    where: { phone },
+    where: { studioId_phone: { studioId, phone } },
     select: { id: true },
   });
   if (existing) return existing.id;
 
   try {
-    const created = await prisma.customer.create({ data: { phone, name } });
+    const created = await prisma.customer.create({ data: { studioId, phone, name } });
     return created.id;
   } catch (error) {
     // Two appointments created for the same new client at the same moment race
@@ -41,7 +42,7 @@ export async function resolveCustomerId(
       error.code === "P2002"
     ) {
       const raced = await prisma.customer.findUnique({
-        where: { phone },
+        where: { studioId_phone: { studioId, phone } },
         select: { id: true },
       });
       if (raced) return raced.id;

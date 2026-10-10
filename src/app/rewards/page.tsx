@@ -4,6 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PASS_COOKIE, readDevicePass } from "@/lib/rewards-access";
 import { getRewardProgram, getStampBalance } from "@/lib/rewards.server";
+import { getPublicStudio, hasFeature } from "@/lib/tenant";
+import { notFound } from "next/navigation";
 import EnrollForm from "@/components/rewards/EnrollForm";
 import StampCard from "@/components/rewards/StampCard";
 import { formatChihuahuaDate } from "@/lib/timezone";
@@ -66,7 +68,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 export default async function RewardsPage() {
-  const program = await getRewardProgram();
+  // La tarjeta pública es del estudio dueño del sitio (Tangible).
+  const studio = await getPublicStudio();
+  if (!studio || !hasFeature(studio, "rewards")) notFound();
+  const studioId = studio.id;
+
+  const program = await getRewardProgram(studioId);
 
   if (!program.isActive) {
     return (
@@ -113,7 +120,7 @@ export default async function RewardsPage() {
   }
 
   const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
+    where: { id: customerId, studioId },
     select: { name: true, joinedAt: true },
   });
 
@@ -133,13 +140,13 @@ export default async function RewardsPage() {
     );
   }
 
-  const stamps = await getStampBalance(customerId);
+  const stamps = await getStampBalance(studioId, customerId);
   const required = program.stampsRequired;
   const complete = stamps >= required;
   const remaining = Math.max(required - stamps, 0);
 
   const lastRedemption = await prisma.redemption.findFirst({
-    where: { customerId },
+    where: { studioId, customerId },
     orderBy: { redeemedAt: "desc" },
     select: { rewardLabel: true, redeemedAt: true },
   });

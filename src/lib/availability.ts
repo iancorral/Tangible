@@ -24,6 +24,7 @@ export type DayWindow = {
  * Precedence: date-specific override > weekly schedule > defaults (10:00–19:00, Sundays off).
  */
 export async function resolveDayWindow(
+  studioId: string,
   year: number,
   month: number,
   day: number
@@ -33,12 +34,12 @@ export async function resolveDayWindow(
   const dayOfWeek = new Date(year, month - 1, day).getDay();
 
   const override = await prisma.availabilityOverride.findFirst({
-    where: { date: { gte: dayStart, lt: dayEnd } },
+    where: { studioId, date: { gte: dayStart, lt: dayEnd } },
   });
   if (override?.isClosed) return { closed: true, startMinutes: 0, endMinutes: 0 };
 
   const blocked = await prisma.blockedDate.findFirst({
-    where: { date: { gte: dayStart, lt: dayEnd } },
+    where: { studioId, date: { gte: dayStart, lt: dayEnd } },
   });
   if (blocked) return { closed: true, startMinutes: 0, endMinutes: 0 };
 
@@ -48,7 +49,7 @@ export async function resolveDayWindow(
     return { closed: false, startMinutes: sh * 60 + sm, endMinutes: eh * 60 + em };
   }
 
-  const schedule = await prisma.workSchedule.findFirst({ where: { dayOfWeek } });
+  const schedule = await prisma.workSchedule.findFirst({ where: { studioId, dayOfWeek } });
   if (schedule?.isDayOff) return { closed: true, startMinutes: 0, endMinutes: 0 };
 
   const [startH, startM] = (schedule?.startTime ?? "10:00").split(":").map(Number);
@@ -68,6 +69,7 @@ type BusyInterval = { start: number; end: number };
  * never disagree about what is free.
  */
 export async function getPublicBusyIntervals(
+  studioId: string,
   dayStart: Date,
   dayEnd: Date,
   excludeAppointmentId?: string
@@ -75,6 +77,7 @@ export async function getPublicBusyIntervals(
   const [appointments, notes] = await Promise.all([
     prisma.appointment.findMany({
       where: {
+        studioId,
         status: "CONFIRMED",
         ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
         OR: [
@@ -85,7 +88,7 @@ export async function getPublicBusyIntervals(
       select: { date: true, endDate: true },
     }),
     prisma.note.findMany({
-      where: { blocksSchedule: true, startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
+      where: { studioId, blocksSchedule: true, startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
       select: { startAt: true, endAt: true },
     }),
   ]);
@@ -115,6 +118,7 @@ export function overlapsAny(start: Date, end: Date, intervals: BusyInterval[]): 
  * within working hours, and no collision with a confirmed appointment (+ buffer).
  */
 export async function isSlotBookable(
+  studioId: string,
   start: Date,
   durationMinutes: number,
   excludeId?: string
@@ -128,7 +132,7 @@ export async function isSlotBookable(
   const month = local.getUTCMonth() + 1;
   const day = local.getUTCDate();
 
-  const window = await resolveDayWindow(year, month, day);
+  const window = await resolveDayWindow(studioId, year, month, day);
   if (window.closed) return { ok: false, reason: "Ese día no está disponible" };
 
   const startMinutes = utcDateToChihuahuaMinutes(start);
@@ -140,7 +144,7 @@ export async function isSlotBookable(
   const dayEnd = chihuahuaToUTC(year, month, day + 1, 0, 0);
   const end = addMinutes(start, durationMinutes);
 
-  const busy = await getPublicBusyIntervals(dayStart, dayEnd, excludeId);
+  const busy = await getPublicBusyIntervals(studioId, dayStart, dayEnd, excludeId);
   if (overlapsAny(start, end, busy)) return { ok: false, reason: "Ese horario ya no está disponible" };
 
   return { ok: true };
@@ -154,6 +158,7 @@ export async function isSlotBookable(
  * re-booked while it was cancelled without rejecting legitimate off-hours slots.
  */
 export async function hasConfirmedCollision(
+  studioId: string,
   start: Date,
   end: Date,
   excludeId?: string
@@ -167,6 +172,7 @@ export async function hasConfirmedCollision(
 
   const appointments = await prisma.appointment.findMany({
     where: {
+      studioId,
       status: "CONFIRMED",
       ...(excludeId ? { id: { not: excludeId } } : {}),
       OR: [

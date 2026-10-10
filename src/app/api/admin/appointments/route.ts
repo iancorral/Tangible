@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireStudio } from "@/lib/tenant";
 import { addMinutes } from "date-fns";
 import { z } from "zod";
 import { resolveCustomerId } from "@/lib/customers";
@@ -23,10 +22,9 @@ const createSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
 
   try {
     const body = await req.json();
@@ -43,10 +41,11 @@ export async function POST(req: Request) {
       validation.data;
 
     const services = await prisma.service.findMany({
-      where: { id: { in: serviceIds } },
+      where: { id: { in: serviceIds }, studioId },
     });
 
-    if (services.length === 0) {
+    // Todos deben existir y ser de este estudio: `connect` por ID no lo revisa.
+    if (services.length !== new Set(serviceIds).size) {
       return NextResponse.json({ error: "Servicios no encontrados" }, { status: 404 });
     }
 
@@ -59,6 +58,7 @@ export async function POST(req: Request) {
     // few minutes is that retry, not a second booking: hand back the first one.
     const duplicate = await prisma.appointment.findFirst({
       where: {
+        studioId,
         date: startDate,
         clientName,
         status: "CONFIRMED",
@@ -74,10 +74,11 @@ export async function POST(req: Request) {
       return NextResponse.json(duplicate, { status: 200 });
     }
 
-    const customerId = await resolveCustomerId(clientName, clientPhone);
+    const customerId = await resolveCustomerId(studioId, clientName, clientPhone);
 
     const appointment = await prisma.appointment.create({
       data: {
+        studioId,
         date: startDate,
         endDate,
         clientName,

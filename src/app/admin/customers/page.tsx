@@ -5,6 +5,7 @@ import Link from "next/link";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import { SensitiveValue } from "@/components/privacy";
 import { formatChihuahuaMonthShort, getChihuahuaParts } from "@/lib/timezone";
+import { useAdminHref } from "@/components/admin/StudioContext";
 
 type CustomerRow = {
   id: string;
@@ -15,6 +16,7 @@ type CustomerRow = {
 };
 
 export default function CustomersPage() {
+  const adminPath = useAdminHref();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [term, setTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function CustomersPage() {
               return (
                 <li key={customer.id}>
                   <Link
-                    href={`/admin/customers/${customer.id}`}
+                    href={adminPath(`/customers/${customer.id}`)}
                     className="flex items-center gap-4 bg-white p-4 rounded-2xl border-2 border-salon-olive/20 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
                   >
                     <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center border-2 border-salon-olive/20 bg-salon-bg text-salon-brown shrink-0">
