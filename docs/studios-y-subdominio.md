@@ -60,8 +60,8 @@ de nuevo ahí.
 
 Enlaces de entrada (cada app instalada abre el suyo):
 
-- Tania: `https://admin.studiotangible.com.mx/login?estudio=tangible`
-- Alejandra: `https://admin.studiotangible.com.mx/login?estudio=iloveme`
+- Tania: `https://admin.studiotangible.com.mx/login?studio=tangible`
+- Alejandra: `https://admin.studiotangible.com.mx/login?studio=iloveme`
 
 **Tania**
 1. Borra la app vieja de su pantalla de inicio.

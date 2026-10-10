@@ -3,7 +3,7 @@
   "short_name": "Tangible",
   "description": "Reserva tu experiencia de uñas y diseño en Tangible.",
   "id": "/admin",
-  "start_url": "/login?estudio=tangible",
+  "start_url": "/login?studio=tangible",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

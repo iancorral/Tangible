@@ -49,9 +49,9 @@ describe("proxy: sitio público", () => {
     const b = proxy(req("https://studiotangible.com.mx/login"));
     expect(b.headers.get("location")).toBe("https://admin.studiotangible.com.mx/login");
 
-    // El enlace propio de cada estudio conserva su ?estudio= al mudarse.
-    const c = proxy(req("https://www.studiotangible.com.mx/login?estudio=iloveme"));
-    expect(c.headers.get("location")).toBe("https://admin.studiotangible.com.mx/login?estudio=iloveme");
+    // El enlace propio de cada estudio conserva su ?studio= al mudarse.
+    const c = proxy(req("https://www.studiotangible.com.mx/login?studio=iloveme"));
+    expect(c.headers.get("location")).toBe("https://admin.studiotangible.com.mx/login?studio=iloveme");
   });
 
   it("las páginas públicas no se tocan", () => {

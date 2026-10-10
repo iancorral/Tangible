@@ -3,7 +3,7 @@
   "short_name": "iLoveMe",
   "description": "Panel de citas de iLoveMe Beauty Salon.",
   "id": "/admin?studio=iloveme",
-  "start_url": "/login?estudio=iloveme",
+  "start_url": "/login?studio=iloveme",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
