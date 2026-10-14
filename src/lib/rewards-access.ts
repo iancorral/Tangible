@@ -23,6 +23,11 @@ const CODE_LENGTH = 6;
  * out, short enough that a code left on a counter is worthless by closing time.
  */
 export const CODE_TTL_MINUTES = 30;
+/**
+ * Enlace mandado por WhatsApp: ella lo abre cuando lo ve, no frente a la
+ * dueña. Sigue siendo de un solo uso y solo llega a su propio chat.
+ */
+export const LINK_TTL_MINUTES = 24 * 60;
 /** Wrong guesses a single code tolerates before it stops working. */
 export const MAX_CODE_ATTEMPTS = 5;
 

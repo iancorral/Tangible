@@ -11,6 +11,7 @@ import { getAppointmentAmount } from "@/lib/pricing";
 import { chihuahuaDateKey } from "@/lib/timezone";
 import {
   CODE_TTL_MINUTES,
+  LINK_TTL_MINUTES,
   MAX_CODE_ATTEMPTS,
   generateClaimCode,
   hashClaimCode,
@@ -183,14 +184,25 @@ export async function getStampBalance(studioId: string, customerId: string): Pro
 export async function issueClaimCode(
   studioId: string,
   customerId: string,
-  createdBy: string
+  createdBy: string,
+  delivery: "qr" | "link" = "qr"
 ): Promise<{ code: string; expiresAt: Date }> {
+  const now = Date.now();
+  const ttlMinutes = delivery === "link" ? LINK_TTL_MINUTES : CODE_TTL_MINUTES;
+
+  // Un enlace nuevo reemplaza todo. Un QR nuevo solo reemplaza otros QR: así
+  // abrir el diálogo en el estudio no rompe el enlace que ya se le mandó.
   await prisma.claimCode.updateMany({
-    where: { studioId, customerId, consumedAt: null },
+    where: {
+      studioId,
+      customerId,
+      consumedAt: null,
+      ...(delivery === "qr" ? { expiresAt: { lte: new Date(now + (CODE_TTL_MINUTES + 1) * 60 * 1000) } } : {}),
+    },
     data: { expiresAt: new Date(0) },
   });
 
-  const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
+  const expiresAt = new Date(now + ttlMinutes * 60 * 1000);
 
   // The retry only guards against an astronomically unlikely hash collision
   // with a code that is still live.
