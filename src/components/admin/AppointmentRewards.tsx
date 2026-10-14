@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import ActivateCardDialog from "./ActivateCardDialog";
 
 type Blocker = "NO_CUSTOMER" | "CANCELLED" | "FREE" | "REDEEMED";
 
@@ -17,9 +18,6 @@ type State = {
   canGrant: boolean;
   enrolled: boolean;
 };
-
-/** The plaintext code, held in memory only for as long as it is on screen. */
-type IssuedCode = { code: string; expiresAt: string };
 
 interface Props {
   appointmentId: string;
@@ -43,30 +41,7 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [issued, setIssued] = useState<IssuedCode | null>(null);
-
-  const issueCode = useCallback(async () => {
-    if (!state?.customer) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/rewards/claim-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId: state.customer.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo generar el código");
-        return;
-      }
-      setIssued({ code: data.code, expiresAt: data.expiresAt });
-    } catch {
-      setError("Error de conexión");
-    } finally {
-      setBusy(false);
-    }
-  }, [state]);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +116,10 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
     }
   }, [appointmentId, state, onFinalPriceChange]);
 
+  const markEnrolled = useCallback(() => {
+    setState((current) => (current ? { ...current, enrolled: true } : current));
+  }, []);
+
   // Nothing to say until the program is switched on.
   if (!state || !state.program.isActive) return null;
 
@@ -209,6 +188,12 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
                 </button>
               )}
 
+              {!blocker && !stampGranted && !state.ready && (
+                <p className="text-[10px] text-salon-gray font-medium mt-2 leading-relaxed text-center">
+                  Al guardar la cita como pagada, el sello se le suma solo.
+                </p>
+              )}
+
               {state.ready && !stampGranted && !blocker && (
                 <button
                   type="button"
@@ -231,56 +216,33 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
         </>
       )}
 
-      {/* Activación de la tarjeta digital.
-          Se puede volver a generar un código aunque ya esté activada: cambia de
-          teléfono, borra cookies, o simplemente no alcanzó a escribirlo. */}
+      {/* Activación de la tarjeta digital (QR + código de respaldo).
+          Se puede volver a activar aunque ya esté activada: cambia de
+          teléfono, borra cookies, o simplemente no alcanzó a escanear. */}
       {state.customer && (
         <div className="mt-3 pt-3 border-t border-salon-brown/10">
-          {issued ? (
-            <>
-              <p className="text-[10px] font-black text-salon-gray uppercase tracking-widest mb-1.5">
-                Código para activar su tarjeta
-              </p>
-              <p className="text-center text-3xl font-black text-salon-brown tracking-[0.16em] tabular-nums bg-salon-blush/40 rounded-xl py-3">
-                {issued.code}
-              </p>
-              <p className="text-[10px] text-salon-gray text-center mt-1.5 leading-relaxed">
-                Un solo uso · vence a las{" "}
-                <span className="font-bold text-salon-brown">
-                  {new Date(issued.expiresAt).toLocaleTimeString("es-MX", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                . Que lo escriba acercando su teléfono al sticker de recompensas.
-              </p>
-              <button
-                type="button"
-                onClick={issueCode}
-                disabled={busy}
-                className="w-full mt-2 text-[10px] font-black uppercase tracking-widest text-salon-gray hover:text-salon-brown disabled:opacity-40"
-              >
-                Generar otro código
-              </button>
-            </>
-          ) : (
-            <>
-              {state.enrolled && (
-                <p className="text-[10px] text-salon-olive font-bold mb-2 text-center">
-                  Ya tiene su tarjeta activada
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={issueCode}
-                disabled={busy}
-                className="w-full py-2.5 rounded-xl border-2 border-salon-brown/25 text-salon-brown text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-salon-brown/5 disabled:opacity-40"
-              >
-                {state.enrolled ? "Activar en otro teléfono" : "Activar su tarjeta digital"}
-              </button>
-            </>
+          {state.enrolled && (
+            <p className="text-[10px] text-salon-olive font-bold mb-2 text-center">
+              Ya tiene su tarjeta activada
+            </p>
           )}
+          <button
+            type="button"
+            onClick={() => setActivating(true)}
+            className="w-full py-2.5 rounded-xl border-2 border-salon-brown/25 text-salon-brown text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-salon-brown/5"
+          >
+            {state.enrolled ? "Activar en otro teléfono" : "Activar su tarjeta digital"}
+          </button>
         </div>
+      )}
+
+      {activating && state.customer && (
+        <ActivateCardDialog
+          customerId={state.customer.id}
+          customerName={state.customer.name}
+          onClose={() => setActivating(false)}
+          onActivated={markEnrolled}
+        />
       )}
 
       {error && (

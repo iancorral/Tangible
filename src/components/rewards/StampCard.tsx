@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CatFace, GiftMark, PawPrint } from "./CatMascot";
 
 /** Where the phone remembers how many stamps it last showed her. */
 const SEEN_KEY = "tangible.stamps.seen";
@@ -27,40 +28,8 @@ interface Props {
   track?: boolean;
 }
 
-/**
- * Cat face. Deliberately geometric: at 40px the silhouette is the whole design,
- * so it is two ears and a head, with the eyes and nose only drawn on the filled
- * state where there is enough contrast to carry them.
- */
-function CatMark({ filled }: { filled: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[64%] h-[64%]" aria-hidden="true">
-      <g
-        fill={filled ? "currentColor" : "none"}
-        stroke={filled ? "none" : "currentColor"}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      >
-        <path d="M5.2 8.6 L3.7 2.5 L9.4 5.7 Z" />
-        <path d="M18.8 8.6 L20.3 2.5 L14.6 5.7 Z" />
-        <ellipse cx="12" cy="13.2" rx="7.5" ry="6.6" />
-      </g>
-
-      {filled && (
-        <>
-          {/* Drawn in the card's own brown, so they read as cut-outs. */}
-          <circle cx="9.1" cy="12.4" r="0.95" fill="#2C1F0E" />
-          <circle cx="14.9" cy="12.4" r="0.95" fill="#2C1F0E" />
-          {/* Heart nose keeps the terracotta accent the flower used to carry. */}
-          <path
-            d="M12 16.4c-1.5-1-2.3-1.7-2.3-2.5a1.15 1.15 0 0 1 2.3-.45 1.15 1.15 0 0 1 2.3.45c0 .8-.8 1.5-2.3 2.5Z"
-            fill="#C4522A"
-          />
-        </>
-      )}
-    </svg>
-  );
-}
+/** Un poco chueco, como un sello de verdad; fijo por posición para no brincar. */
+const TILT = [-8, 5, -3, 7, -6, 4, -5, 8, -4, 6];
 
 /**
  * The stamp card, client-side so it can notice a stamp that landed since she
@@ -74,6 +43,8 @@ export default function StampCard({ stamps, required, track = true }: Props) {
   const router = useRouter();
   const filled = Math.min(stamps, required);
   const [earned, setEarned] = useState(0);
+  // Hasta 6 en una fila; más, en dos filas parejas.
+  const columns = required <= 6 ? required : Math.ceil(required / 2);
 
   useEffect(() => {
     if (!track) return;
@@ -161,30 +132,44 @@ export default function StampCard({ stamps, required, track = true }: Props) {
       )}
 
       <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${required}, minmax(0, 1fr))` }}
+        className="grid gap-2.5"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         role="img"
         aria-label={`${filled} de ${required} sellos`}
       >
         {Array.from({ length: required }, (_, i) => {
           const isFilled = i < filled;
           const isNext = i === filled;
+          const isReward = i === required - 1;
           // Only the stamps that arrived since her last look pop in.
           const isNew = earned > 0 && i >= filled - earned && isFilled;
 
           return (
-            <div
-              key={i}
-              aria-hidden="true"
-              className={`aspect-square rounded-full grid place-items-center border-2 ${
-                isFilled
-                  ? "bg-salon-brown border-salon-brown text-salon-blush"
-                  : isNext
-                    ? "border-dashed border-salon-terracotta text-salon-terracotta/60"
-                    : "border-dashed border-salon-olive/35 text-salon-olive/30"
-              } ${isNew ? "stamp-pop" : ""}`}
-            >
-              <CatMark filled={isFilled} />
+            <div key={i} aria-hidden="true" className="relative aspect-square">
+              {isFilled ? (
+                <div
+                  className={`absolute inset-0 rounded-full grid place-items-center bg-salon-blush ring-2 ring-salon-pink/60 ring-offset-2 ring-offset-white shadow-[inset_0_-3px_0_rgba(196,120,154,0.25)] ${
+                    isNew ? "stamp-pop" : ""
+                  }`}
+                  style={{ transform: isNew ? undefined : `rotate(${TILT[i % TILT.length]}deg)` }}
+                >
+                  <CatFace mood={filled === required ? "happy" : "curious"} className="w-[78%] h-[78%] translate-y-[3%]" />
+                </div>
+              ) : (
+                <div
+                  className={`absolute inset-0 rounded-full grid place-items-center border-2 border-dashed ${
+                    isNext
+                      ? "border-salon-terracotta/70 bg-salon-terracotta/[0.04] text-salon-terracotta/55"
+                      : "border-salon-brown/15 text-salon-brown/15"
+                  }`}
+                >
+                  {isReward ? (
+                    <GiftMark className={`w-[48%] h-[48%] ${isNext ? "" : "text-salon-pink/70"}`} />
+                  ) : (
+                    <PawPrint className="w-[44%] h-[44%]" />
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import MuralDecorations from "@/components/layout/MuralDecorations";
 import { REWARD_TYPES, type RewardType } from "@/lib/rewards";
 import { useAdminHref } from "@/components/admin/StudioContext";
+import ActivateCardDialog from "@/components/admin/ActivateCardDialog";
 
 type Program = {
   isActive: boolean;
@@ -22,6 +23,8 @@ type CustomerRow = {
   maskedPhone: string;
   stamps: number;
   ready: boolean;
+  /** Ya abrió su tarjeta digital en el celular. */
+  enrolled: boolean;
 };
 
 type Totals = { withStamps: number; totalStamps: number; readyToRedeem: number };
@@ -64,6 +67,7 @@ export default function RewardsPage() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Program | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [activating, setActivating] = useState<CustomerRow | null>(null);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
   const load = useCallback(async (query: string) => {
@@ -518,13 +522,35 @@ export default function RewardsPage() {
                       {customer.stamps}
                     </span>
                     <span className="text-[10px] text-salon-gray/60">·</span>
-                    <span className="text-[10px] text-salon-gray/70 tabular-nums">
+                    <span className="text-[10px] text-salon-gray/70 tabular-nums whitespace-nowrap">
                       {customer.maskedPhone}
                     </span>
+                    {customer.enrolled && (
+                      <span className="hidden sm:inline text-[10px] font-bold text-salon-olive">
+                        · Tarjeta activa
+                      </span>
+                    )}
                   </div>
                 </Link>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {!customer.enrolled && (
+                    <button
+                      type="button"
+                      onClick={() => setActivating(customer)}
+                      aria-label={`Activar la tarjeta digital de ${customer.name}`}
+                      title="Activar su tarjeta digital"
+                      className="h-9 min-w-9 px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl bg-salon-blush/50 text-salon-brown text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-salon-blush"
+                    >
+                      <svg className="w-4 h-4 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
+                      </svg>
+                      <span className="hidden sm:inline">Activar</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => adjust(customer.id, "REMOVE")}
                     disabled={busyId === customer.id || customer.stamps === 0}
@@ -548,9 +574,23 @@ export default function RewardsPage() {
         )}
 
         <p className="text-[10px] text-salon-gray mt-6 leading-relaxed">
-          Los sellos por cita se otorgan al cobrar (fase 3). Aquí sólo se ajustan a mano:
-          para premiar a una clienta de siempre o para corregir un error.
+          Cada cita pagada suma su sello sola al registrar el cobro (las gratis y las
+          canceladas no). Aquí sólo se ajustan a mano: para premiar a una clienta de
+          siempre o para corregir un error. Acercar el celular al sticker nunca da
+          sellos: sólo abre la tarjeta.
         </p>
+
+        {activating && (
+          <ActivateCardDialog
+            customerId={activating.id}
+            customerName={activating.name}
+            onClose={() => setActivating(null)}
+            onActivated={() => {
+              const id = activating.id;
+              setCustomers((list) => list.map((c) => (c.id === id ? { ...c, enrolled: true } : c)));
+            }}
+          />
+        )}
       </div>
     </main>
   );

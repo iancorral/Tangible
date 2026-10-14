@@ -1,7 +1,8 @@
 import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireStudio } from "@/lib/tenant";
+import { hasFeature, requireStudio } from "@/lib/tenant";
+import { grantAppointmentStampIfEligible } from "@/lib/rewards.server";
 import { z } from "zod";
 
 const paymentSchema = z.object({
@@ -43,7 +44,17 @@ export async function PATCH(
       include: { services: true },
     });
 
-    return NextResponse.json(updated);
+    // Cobrada = sello. Si falla, el pago ya quedó guardado y la dueña puede
+    // darlo a mano; no se le muestra un error por algo secundario.
+    let stampGranted = false;
+    if (updated.paymentStatus === "PAID" && hasFeature(ctx.studio, "rewards")) {
+      stampGranted = await grantAppointmentStampIfEligible(studioId, id, ctx.email).catch((error) => {
+        console.error("Sello automático:", error);
+        return false;
+      });
+    }
+
+    return NextResponse.json({ ...updated, stampGranted });
   } catch (error) {
     if (isNotFound(error)) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });

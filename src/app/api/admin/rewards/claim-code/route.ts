@@ -9,6 +9,39 @@ const schema = z.object({
 });
 
 /**
+ * Estado de activación de una clienta: el diálogo del QR lo consulta cada pocos
+ * segundos para avisar "¡Listo!" en cuanto ella escanea, sin que nadie recargue.
+ */
+export async function GET(req: Request) {
+  const ctx = await requireStudio();
+  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { studioId } = ctx;
+  if (!hasFeature(ctx.studio, "rewards")) {
+    return NextResponse.json({ error: "Premios no está activo en este estudio" }, { status: 403 });
+  }
+
+  const customerId = new URL(req.url).searchParams.get("customerId") ?? "";
+  if (!/^[a-f\d]{24}$/i.test(customerId)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  const [customer, lastUsed] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId, studioId }, select: { joinedAt: true } }),
+    prisma.claimCode.findFirst({
+      where: { studioId, customerId, consumedAt: { not: null } },
+      orderBy: { consumedAt: "desc" },
+      select: { consumedAt: true },
+    }),
+  ]);
+  if (!customer) return NextResponse.json({ error: "Clienta no encontrada" }, { status: 404 });
+
+  return NextResponse.json({
+    enrolled: customer.joinedAt !== null,
+    lastActivatedAt: lastUsed?.consumedAt ?? null,
+  });
+}
+
+/**
  * Issues an enrollment code for a customer. The plaintext is returned exactly
  * once, for the owner to read out; only its hash is stored.
  */

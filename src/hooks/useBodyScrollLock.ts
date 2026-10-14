@@ -11,6 +11,8 @@ export function useBodyScrollLock(active = true) {
   useEffect(() => {
     if (!active) return;
     const { body } = document;
+    // Un modal encima de otro: el de abajo ya tiene la página fija.
+    if (body.style.position === "fixed") return;
     const scrollY = window.scrollY;
     const previous = {
       position: body.style.position,

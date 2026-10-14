@@ -4,9 +4,10 @@
  * the browser bundle.
  */
 import { createHash } from "node:crypto";
-import type { Prisma, RewardProgram } from "@prisma/client";
+import { Prisma, type RewardProgram } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UNSPENT_STAMP } from "@/lib/rewards";
+import { getAppointmentAmount } from "@/lib/pricing";
 import {
   CODE_TTL_MINUTES,
   MAX_CODE_ATTEMPTS,
@@ -15,13 +16,64 @@ import {
   normalizeClaimCode,
 } from "@/lib/rewards-access";
 
-/** Reads the studio's program, creating it with the defaults on first use. */
+/**
+ * Reads the studio's program, creating it with the defaults on first use.
+ * Read first: an upsert with an empty update still bumps `updatedAt`, which
+ * turned every page view into a write.
+ */
 export async function getRewardProgram(studioId: string): Promise<RewardProgram> {
-  return prisma.rewardProgram.upsert({
-    where: { studioId },
-    update: {},
-    create: { studioId },
+  const existing = await prisma.rewardProgram.findUnique({ where: { studioId } });
+  if (existing) return existing;
+  return prisma.rewardProgram.upsert({ where: { studioId }, update: {}, create: { studioId } });
+}
+
+/**
+ * Da el sello de una cita si le corresponde. Se llama al registrar el pago,
+ * para que el sello no dependa de que la dueña se acuerde de darlo.
+ *
+ * Mismas reglas que el botón manual (ver api/admin/rewards/appointment):
+ * programa activo, cita con ficha de clienta, no cancelada, no gratis y sin
+ * recompensa aplicada. El índice único de `dedupeKey` garantiza un solo sello
+ * por cita aunque se guarde el pago varias veces.
+ */
+export async function grantAppointmentStampIfEligible(
+  studioId: string,
+  appointmentId: string,
+  createdBy: string
+): Promise<boolean> {
+  const program = await getRewardProgram(studioId);
+  if (!program.isActive) return false;
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId, studioId },
+    include: { services: { select: { price: true } } },
   });
+  if (!appointment?.customerId || appointment.status === "CANCELLED") return false;
+  if (getAppointmentAmount(appointment) <= 0) return false;
+
+  const dedupeKey = `appt:${appointmentId}`;
+  const redeemed = await prisma.redemption.findUnique({ where: { dedupeKey, studioId }, select: { id: true } });
+  if (redeemed) return false;
+
+  try {
+    await prisma.stamp.create({
+      data: {
+        studioId,
+        customerId: appointment.customerId,
+        dedupeKey,
+        source: "APPOINTMENT",
+        appointmentId,
+        redemptionId: null,
+        note: "Automático al registrar el pago",
+        createdBy,
+      },
+    });
+    return true;
+  } catch (error) {
+    // Ya tenía su sello: es exactamente el resultado buscado.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return false;
+    throw error;
+  }
 }
 
 export async function updateRewardProgram(
