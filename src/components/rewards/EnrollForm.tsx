@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SEEN_KEY } from "./StampCard";
 
 const CODE_LENGTH = 6;
 
@@ -82,6 +83,14 @@ export default function EnrollForm({ initialCode }: { initialCode?: string }) {
         setChars(Array(CODE_LENGTH).fill(""));
         inputs.current[0]?.focus();
         return;
+      }
+
+      // Sus sellos (por ejemplo el de la visita de hoy) caen la primera vez que
+      // ve su tarjeta, en vez de aparecer ya puestos.
+      try {
+        window.localStorage.setItem(SEEN_KEY, "0");
+      } catch {
+        // Sin almacenamiento: la tarjeta se ve igual, solo sin animación.
       }
 
       // The pass is now set; the page reads the card server-side on refresh.

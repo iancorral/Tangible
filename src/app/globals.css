@@ -116,8 +116,39 @@ body::before {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* El sello cae: llega grande y girado, golpea la tarjeta y se asienta chueco
+   (--tilt), como un sello de goma de verdad. */
+.stamp-drop { animation: stampDrop 640ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes stampDrop {
+  0%   { transform: translateY(-46px) scale(2.2) rotate(-20deg); opacity: 0; }
+  40%  { opacity: 1; }
+  55%  { transform: translateY(0) scale(0.9) rotate(var(--tilt, 0deg)); }
+  75%  { transform: scale(1.07) rotate(var(--tilt, 0deg)); }
+  100% { transform: scale(1) rotate(var(--tilt, 0deg)); opacity: 1; }
+}
+
+/* Aviso "¡Se sumó tu sello!": sube, se queda un momento y se desvanece. */
+.stamp-toast { animation: stampToastIn 420ms 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both, stampToastOut 500ms ease-in 3200ms forwards; }
+@keyframes stampToastIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes stampToastOut {
+  to { opacity: 0; transform: translateY(-4px); visibility: hidden; }
+}
+
+/* La onda del golpe, justo al tocar. */
+.stamp-ripple { animation: stampRipple 700ms ease-out both; }
+@keyframes stampRipple {
+  0%, 45% { transform: scale(0.9); opacity: 0; }
+  50%     { transform: scale(1); opacity: 0.9; }
+  100%    { transform: scale(1.75); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .stamp-pop, .stamp-cheer { animation: none; }
+  .stamp-pop, .stamp-cheer, .stamp-drop { animation: none; }
+  .stamp-toast { animation: stampToastOut 1ms 3200ms forwards; }
+  .stamp-ripple { display: none; }
 }
 
 .float-ambient { animation: floatAmbient 20s infinite alternate ease-in-out; }

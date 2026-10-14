@@ -11,7 +11,7 @@ const prismaMock = vi.hoisted(() => ({
   appointment: { update: vi.fn(), findUnique: vi.fn() },
   rewardProgram: { findUnique: vi.fn(), upsert: vi.fn() },
   redemption: { findUnique: vi.fn() },
-  stamp: { create: vi.fn() },
+  stamp: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
 }));
 const sessionMock = vi.hoisted(() => vi.fn());
 
@@ -38,6 +38,7 @@ const appointment = (overrides: Record<string, unknown> = {}) => ({
   studioId: STUDIO_ID,
   customerId: CUSTOMER,
   status: "COMPLETED",
+  date: new Date("2026-10-13T16:00:00Z"),
   paymentStatus: "PAID",
   finalPrice: null,
   services: [{ price: 450 }],
@@ -72,6 +73,8 @@ beforeEach(() => {
   prismaMock.appointment.findUnique.mockResolvedValue(appointment());
   prismaMock.redemption.findUnique.mockResolvedValue(null);
   prismaMock.stamp.create.mockResolvedValue({});
+  prismaMock.stamp.findMany.mockResolvedValue([]);
+  prismaMock.stamp.update.mockResolvedValue({});
 });
 
 describe("PATCH /api/admin/appointments/[id]/payment — sello automático", () => {
@@ -139,5 +142,27 @@ describe("PATCH /api/admin/appointments/[id]/payment — sello automático", () 
     expect(status).toBe(200);
     expect(body.paymentStatus).toBe("PAID");
     expect(body.stampGranted).toBe(false);
+  });
+
+  it("si ya le dio un sello a mano ese día, lo liga a la cita y no suma otro", async () => {
+    // Caso real: cita a las 10:00 (Chihuahua), sello a mano a las 11:52, pago después.
+    prismaMock.appointment.findUnique.mockResolvedValue(appointment({ date: new Date("2026-10-13T16:00:00Z") }));
+    prismaMock.stamp.findMany.mockResolvedValue([{ id: "s-manual", earnedAt: new Date("2026-10-13T17:52:46Z") }]);
+    const { body } = await pay();
+    expect(body.stampGranted).toBe(false);
+    expect(prismaMock.stamp.create).not.toHaveBeenCalled();
+    expect(prismaMock.stamp.update).toHaveBeenCalledWith({
+      where: { id: "s-manual", studioId: STUDIO_ID },
+      data: { dedupeKey: `appt:${APPT}`, appointmentId: APPT },
+    });
+  });
+
+  it("un sello a mano de otro día no cuenta como el de esta cita", async () => {
+    // 23:30 del día anterior en Chihuahua = 05:30Z del mismo día UTC.
+    prismaMock.appointment.findUnique.mockResolvedValue(appointment({ date: new Date("2026-10-13T16:00:00Z") }));
+    prismaMock.stamp.findMany.mockResolvedValue([{ id: "s-ayer", earnedAt: new Date("2026-10-13T05:30:00Z") }]);
+    const { body } = await pay();
+    expect(body.stampGranted).toBe(true);
+    expect(prismaMock.stamp.update).not.toHaveBeenCalled();
   });
 });

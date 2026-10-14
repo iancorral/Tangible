@@ -8,6 +8,7 @@ import { Prisma, type RewardProgram } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UNSPENT_STAMP } from "@/lib/rewards";
 import { getAppointmentAmount } from "@/lib/pricing";
+import { chihuahuaDateKey } from "@/lib/timezone";
 import {
   CODE_TTL_MINUTES,
   MAX_CODE_ATTEMPTS,
@@ -25,6 +26,25 @@ export async function getRewardProgram(studioId: string): Promise<RewardProgram>
   const existing = await prisma.rewardProgram.findUnique({ where: { studioId } });
   if (existing) return existing;
   return prisma.rewardProgram.upsert({ where: { studioId }, update: {}, create: { studioId } });
+}
+
+/** Sello a mano, sin gastar ni ligar a una cita, dado el mismo día (Chihuahua) que la cita. */
+async function findSameDayManualStamp(studioId: string, customerId: string, day: Date): Promise<string | null> {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const candidates = await prisma.stamp.findMany({
+    where: {
+      studioId,
+      customerId,
+      source: "MANUAL",
+      dedupeKey: { startsWith: "manual:" },
+      earnedAt: { gte: new Date(day.getTime() - DAY_MS), lte: new Date(day.getTime() + DAY_MS) },
+      ...UNSPENT_STAMP,
+    },
+    select: { id: true, earnedAt: true },
+    orderBy: { earnedAt: "asc" },
+  });
+  const key = chihuahuaDateKey(day);
+  return candidates.find((stamp) => chihuahuaDateKey(stamp.earnedAt) === key)?.id ?? null;
 }
 
 /**
@@ -54,6 +74,17 @@ export async function grantAppointmentStampIfEligible(
   const dedupeKey = `appt:${appointmentId}`;
   const redeemed = await prisma.redemption.findUnique({ where: { dedupeKey, studioId }, select: { id: true } });
   if (redeemed) return false;
+
+  // ¿Ya se lo dio a mano ese mismo día (Premios → +)? Entonces ese es el sello
+  // de esta visita: se liga a la cita en lugar de sumar otro.
+  const sameDayManual = await findSameDayManualStamp(studioId, appointment.customerId, appointment.date);
+  if (sameDayManual) {
+    await prisma.stamp.update({
+      where: { id: sameDayManual, studioId },
+      data: { dedupeKey, appointmentId },
+    });
+    return false;
+  }
 
   try {
     await prisma.stamp.create({
