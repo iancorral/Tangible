@@ -7,7 +7,7 @@ import { getRewardProgram, getStampBalance } from "@/lib/rewards.server";
 import { getPublicStudio, hasFeature } from "@/lib/tenant";
 import { notFound } from "next/navigation";
 import EnrollForm from "@/components/rewards/EnrollForm";
-import StampCard from "@/components/rewards/StampCard";
+import RewardCoupon from "@/components/rewards/RewardCoupon";
 import { formatChihuahuaDate } from "@/lib/timezone";
 import type { Metadata } from "next";
 
@@ -67,7 +67,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function RewardsPage() {
+export default async function RewardsPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
+  // Código que trae el QR de activación del panel (un solo uso, 30 minutos).
+  const { code: qrCode } = await searchParams;
   // La tarjeta pública es del estudio dueño del sitio (Tangible).
   const studio = await getPublicStudio();
   if (!studio || !hasFeature(studio, "rewards")) notFound();
@@ -98,19 +100,26 @@ export default async function RewardsPage() {
   if (!customerId) {
     return (
       <Shell>
-        <div className="bg-white border-2 border-salon-olive/20 rounded-3xl p-6 mb-5 hand-drawn">
-          <p className="text-[10px] font-black text-salon-gray uppercase tracking-widest text-center mb-5">
-            Tu tarjeta de sellos
-          </p>
-          <div className="opacity-35 mb-5">
-            <StampCard stamps={0} required={program.stampsRequired} track={false} />
-          </div>
-          <p className="text-xs text-salon-gray text-center leading-relaxed">
-            Activa tu tarjeta con el código que te damos al terminar tu cita.
-          </p>
+        <div className="mb-6">
+          <RewardCoupon
+            stamps={0}
+            required={program.stampsRequired}
+            rewardLabel={program.rewardLabel}
+            termsNote={program.termsNote}
+            preview
+          />
         </div>
 
-        <EnrollForm />
+        <p className="text-sm font-black text-salon-brown text-center mb-1">
+          {qrCode ? "Activando tu tarjeta…" : "Activa tu tarjeta"}
+        </p>
+        <p className="text-xs text-salon-gray text-center leading-relaxed mb-5">
+          {qrCode
+            ? "Un segundo, la estamos dejando lista en este celular."
+            : "Escribe el código que te damos en el estudio, o escanea el QR que te mostramos."}
+        </p>
+
+        <EnrollForm initialCode={qrCode} />
 
         <p className="text-[10px] text-salon-gray/80 text-center leading-relaxed mt-4">
           Solo la primera vez. Después tu tarjeta se abre sola en este teléfono.
@@ -142,8 +151,6 @@ export default async function RewardsPage() {
 
   const stamps = await getStampBalance(studioId, customerId);
   const required = program.stampsRequired;
-  const complete = stamps >= required;
-  const remaining = Math.max(required - stamps, 0);
 
   const lastRedemption = await prisma.redemption.findFirst({
     where: { studioId, customerId },
@@ -164,82 +171,14 @@ export default async function RewardsPage() {
         )}
       </div>
 
-      <section
-        className={`rounded-3xl p-6 mb-5 hand-drawn border-2 ${
-          complete
-            ? "bg-gradient-to-b from-[#FDF0F4] to-white border-salon-pink/50"
-            : "bg-white border-salon-olive/20"
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <p className="text-[10px] font-black text-salon-gray uppercase tracking-widest">
-            Tus sellos
-          </p>
-          <p className="text-xs font-black text-salon-brown tabular-nums">
-            {Math.min(stamps, required)}{" "}
-            <span className="text-salon-gray font-normal">/ {required}</span>
-          </p>
-        </div>
-
-        <StampCard stamps={stamps} required={required} />
-
-        {complete ? (
-          <div className="text-center mt-5">
-            <p className="font-title text-2xl font-black text-salon-brown uppercase tracking-[0.1em] leading-tight mb-2">
-              Recompensa
-              <br />
-              lista
-            </p>
-            <p className="text-sm font-black text-salon-brown mb-1">
-              {program.rewardLabel}
-            </p>
-            <p className="text-[11px] text-salon-gray leading-relaxed">
-              Muestra esta pantalla en el estudio y te la aplicamos al cobrar.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="h-1.5 rounded-full bg-salon-olive/15 overflow-hidden mt-5 mb-3">
-              <div
-                className="h-full rounded-full bg-salon-olive transition-all"
-                style={{ width: `${(stamps / required) * 100}%` }}
-              />
-            </div>
-            <p className="text-center text-xs text-salon-brown leading-relaxed">
-              {remaining === 1 ? (
-                <>
-                  Falta <strong>1 visita</strong> para tu recompensa
-                </>
-              ) : (
-                <>
-                  Faltan <strong>{remaining} visitas</strong> para tu recompensa
-                </>
-              )}
-            </p>
-          </>
-        )}
-      </section>
-
-      {!complete && (
-        <section className="bg-white border-2 border-salon-lavender/35 rounded-2xl p-5 mb-5">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <p className="text-[10px] font-black text-salon-gray uppercase tracking-widest">
-              Tu recompensa
-            </p>
-            <span className="text-[9px] font-black text-salon-lavender bg-salon-lavender/10 px-2 py-1 rounded-full uppercase tracking-wider shrink-0">
-              Al llegar a {required}
-            </span>
-          </div>
-          <p className="text-sm font-black text-salon-brown leading-snug">
-            {program.rewardLabel}
-          </p>
-          {program.termsNote && (
-            <p className="text-[11px] text-salon-gray mt-1.5 leading-relaxed">
-              {program.termsNote}
-            </p>
-          )}
-        </section>
-      )}
+      <div className="mb-6">
+        <RewardCoupon
+          stamps={stamps}
+          required={required}
+          rewardLabel={program.rewardLabel}
+          termsNote={program.termsNote}
+        />
+      </div>
 
       {lastRedemption && (
         <section className="bg-salon-olive/5 border-2 border-salon-olive/30 rounded-2xl px-5 py-4 mb-5">
@@ -261,7 +200,7 @@ export default async function RewardsPage() {
       </Link>
 
       <p className="text-[10px] text-salon-gray/80 text-center leading-relaxed mt-4">
-        Tu sello se agrega al terminar cada cita.
+        El día de tu cita, acerca tu celular al sticker del estudio y tu sello cae solito.
       </p>
     </Shell>
   );

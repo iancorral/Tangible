@@ -4,7 +4,7 @@ import { hasFeature, requireStudio } from "@/lib/tenant";
 import { maskPhone } from "@/lib/phone";
 import { UNSPENT_STAMP } from "@/lib/rewards";
 import { getRewardProgram } from "@/lib/rewards.server";
-import type { Prisma } from "@prisma/client";
+import { matchesClient } from "@/lib/search";
 
 const MAX_CUSTOMERS = 300;
 
@@ -18,21 +18,13 @@ export async function GET(req: Request) {
 
   const term = (new URL(req.url).searchParams.get("q") ?? "").trim();
 
-  const where: Prisma.CustomerWhereInput = {};
-  if (term.length >= 2) {
-    const digits = term.replace(/\D/g, "");
-    where.OR = [
-      { name: { contains: term, mode: "insensitive" } },
-      ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
-    ];
-  }
 
   const [program, customers, unspent] = await Promise.all([
     getRewardProgram(studioId),
+    // Sin acentos ni orden de palabras ("pena dania"): se filtra en memoria.
     prisma.customer.findMany({
-      where: { studioId, ...where },
-      take: MAX_CUSTOMERS,
-      select: { id: true, name: true, phone: true },
+      where: { studioId },
+      select: { id: true, name: true, phone: true, joinedAt: true },
     }),
     // Balances for everyone in one pass. The totals below are studio-wide and
     // deliberately not filtered by the search term: an outstanding-rewards
@@ -47,6 +39,8 @@ export async function GET(req: Request) {
   const balances = new Map(unspent.map((row) => [row.customerId, row._count._all]));
 
   const rows = customers
+    .filter((customer) => term.length < 2 || matchesClient(customer, term))
+    .slice(0, MAX_CUSTOMERS)
     .map((customer) => {
       const stamps = balances.get(customer.id) ?? 0;
       return {
@@ -55,6 +49,7 @@ export async function GET(req: Request) {
         maskedPhone: maskPhone(customer.phone),
         stamps,
         ready: stamps >= program.stampsRequired,
+        enrolled: customer.joinedAt !== null,
       };
     })
     .sort((a, b) => b.stamps - a.stamps || a.name.localeCompare(b.name, "es"));

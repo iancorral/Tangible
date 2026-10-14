@@ -4,9 +4,11 @@
  * the browser bundle.
  */
 import { createHash } from "node:crypto";
-import type { Prisma, RewardProgram } from "@prisma/client";
+import { Prisma, type RewardProgram } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UNSPENT_STAMP } from "@/lib/rewards";
+import { getAppointmentAmount } from "@/lib/pricing";
+import { chihuahuaDateKey } from "@/lib/timezone";
 import {
   CODE_TTL_MINUTES,
   MAX_CODE_ATTEMPTS,
@@ -15,13 +17,143 @@ import {
   normalizeClaimCode,
 } from "@/lib/rewards-access";
 
-/** Reads the studio's program, creating it with the defaults on first use. */
+/**
+ * Reads the studio's program, creating it with the defaults on first use.
+ * Read first: an upsert with an empty update still bumps `updatedAt`, which
+ * turned every page view into a write.
+ */
 export async function getRewardProgram(studioId: string): Promise<RewardProgram> {
-  return prisma.rewardProgram.upsert({
-    where: { studioId },
-    update: {},
-    create: { studioId },
+  const existing = await prisma.rewardProgram.findUnique({ where: { studioId } });
+  if (existing) return existing;
+  return prisma.rewardProgram.upsert({ where: { studioId }, update: {}, create: { studioId } });
+}
+
+/** Sello a mano, sin gastar ni ligar a una cita, dado el mismo día (Chihuahua) que la cita. */
+async function findSameDayManualStamp(studioId: string, customerId: string, day: Date): Promise<string | null> {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const candidates = await prisma.stamp.findMany({
+    where: {
+      studioId,
+      customerId,
+      source: "MANUAL",
+      dedupeKey: { startsWith: "manual:" },
+      earnedAt: { gte: new Date(day.getTime() - DAY_MS), lte: new Date(day.getTime() + DAY_MS) },
+      ...UNSPENT_STAMP,
+    },
+    select: { id: true, earnedAt: true },
+    orderBy: { earnedAt: "asc" },
   });
+  const key = chihuahuaDateKey(day);
+  return candidates.find((stamp) => chihuahuaDateKey(stamp.earnedAt) === key)?.id ?? null;
+}
+
+/**
+ * Da el sello de una cita si le corresponde. Se llama al registrar el pago,
+ * para que el sello no dependa de que la dueña se acuerde de darlo.
+ *
+ * Mismas reglas que el botón manual (ver api/admin/rewards/appointment):
+ * programa activo, cita con ficha de clienta, no cancelada, no gratis y sin
+ * recompensa aplicada. El índice único de `dedupeKey` garantiza un solo sello
+ * por cita aunque se guarde el pago varias veces.
+ */
+export async function grantAppointmentStampIfEligible(
+  studioId: string,
+  appointmentId: string,
+  createdBy: string,
+  note = "Automático al registrar el pago"
+): Promise<boolean> {
+  const program = await getRewardProgram(studioId);
+  if (!program.isActive) return false;
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId, studioId },
+    include: { services: { select: { price: true } } },
+  });
+  if (!appointment?.customerId || appointment.status === "CANCELLED") return false;
+  if (getAppointmentAmount(appointment) <= 0) return false;
+
+  const dedupeKey = `appt:${appointmentId}`;
+  const redeemed = await prisma.redemption.findUnique({ where: { dedupeKey, studioId }, select: { id: true } });
+  if (redeemed) return false;
+
+  // ¿Ya se lo dio a mano ese mismo día (Premios → +)? Entonces ese es el sello
+  // de esta visita: se liga a la cita en lugar de sumar otro.
+  const sameDayManual = await findSameDayManualStamp(studioId, appointment.customerId, appointment.date);
+  if (sameDayManual) {
+    await prisma.stamp.update({
+      where: { id: sameDayManual, studioId },
+      data: { dedupeKey, appointmentId },
+    });
+    return false;
+  }
+
+  try {
+    await prisma.stamp.create({
+      data: {
+        studioId,
+        customerId: appointment.customerId,
+        dedupeKey,
+        source: "APPOINTMENT",
+        appointmentId,
+        redemptionId: null,
+        note,
+        createdBy,
+      },
+    });
+    return true;
+  } catch (error) {
+    // Ya tenía su sello: es exactamente el resultado buscado.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return false;
+    throw error;
+  }
+}
+
+/**
+ * Quita el sello de una cita que dejó de merecerlo (se canceló o quedó gratis).
+ * Si ya se gastó en una recompensa se deja: deshacer un canje es otra cosa.
+ */
+export async function revokeAppointmentStamp(studioId: string, appointmentId: string): Promise<boolean> {
+  const { count } = await prisma.stamp.deleteMany({
+    where: { studioId, dedupeKey: `appt:${appointmentId}`, ...UNSPENT_STAMP },
+  });
+  return count > 0;
+}
+
+/** Desde cuánto antes de su cita puede pasar el celular y llevarse el sello. */
+export const TAP_OPENS_BEFORE_MIN = 60;
+
+/**
+ * La clienta pasó su celular por el sticker: si hoy tiene una cita que aún no
+ * da su sello, se lo da. Así el sticker queda "armado" en cuanto Tania agenda
+ * la cita y se bloquea solo al usarlo: un sello por cita, nunca por toque.
+ *
+ * Solo el mismo día (Chihuahua) y desde una hora antes de la cita, para que
+ * abrir el enlace desde casa o días antes no adelante nada.
+ */
+export async function claimTapStamp(studioId: string, customerId: string, now = new Date()): Promise<boolean> {
+  const program = await getRewardProgram(studioId);
+  if (!program.isActive) return false;
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const today = chihuahuaDateKey(now);
+  const candidates = await prisma.appointment.findMany({
+    where: {
+      studioId,
+      customerId,
+      status: { not: "CANCELLED" },
+      date: { gte: new Date(now.getTime() - DAY_MS), lte: new Date(now.getTime() + TAP_OPENS_BEFORE_MIN * 60 * 1000) },
+    },
+    select: { id: true, date: true },
+    orderBy: { date: "asc" },
+  });
+
+  for (const appointment of candidates) {
+    if (chihuahuaDateKey(appointment.date) !== today) continue;
+    if (await grantAppointmentStampIfEligible(studioId, appointment.id, "clienta (NFC)", "Al pasar el celular")) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export async function updateRewardProgram(

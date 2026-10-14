@@ -1,10 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CatFace, GiftMark, PawPrint } from "./CatMascot";
 
 /** Where the phone remembers how many stamps it last showed her. */
-const SEEN_KEY = "tangible.stamps.seen";
+export const SEEN_KEY = "tangible.stamps.seen";
+
+/**
+ * Cuánto se ve la tarjeta "como estaba" antes de que caiga el sello nuevo, y
+ * cuánto espera cada sello extra. Es el momento del NFC: acerca el celular, se
+ * abre su tarjeta y el sello cae frente a ella.
+ */
+const LAND_DELAY_MS = 700;
+const STAGGER_MS = 220;
+/** Dentro de la animación stamp-drop, cuándo toca la tarjeta (55% de 640ms). */
+const TOUCHDOWN_MS = 350;
+
+function readSeen(): string | null {
+  try {
+    return window.localStorage.getItem(SEEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeSeen(value: number) {
+  try {
+    window.localStorage.setItem(SEEN_KEY, String(value));
+  } catch {
+    // Modo privado o almacenamiento bloqueado: sin animación, la tarjeta igual sirve.
+  }
+}
 
 /**
  * How the open card notices a stamp granted while she is looking at it.
@@ -20,47 +47,14 @@ interface Props {
   stamps: number;
   required: number;
   /**
-   * The enrollment screen shows an empty card as decoration. It must not record
-   * "she has seen 0 stamps", or activating would then celebrate her whole
-   * existing balance as if it had just arrived.
+   * The enrollment screen shows an empty card as decoration, so it does not
+   * track. Activating is what records "0 seen" (EnrollForm), on purpose.
    */
   track?: boolean;
 }
 
-/**
- * Cat face. Deliberately geometric: at 40px the silhouette is the whole design,
- * so it is two ears and a head, with the eyes and nose only drawn on the filled
- * state where there is enough contrast to carry them.
- */
-function CatMark({ filled }: { filled: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[64%] h-[64%]" aria-hidden="true">
-      <g
-        fill={filled ? "currentColor" : "none"}
-        stroke={filled ? "none" : "currentColor"}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      >
-        <path d="M5.2 8.6 L3.7 2.5 L9.4 5.7 Z" />
-        <path d="M18.8 8.6 L20.3 2.5 L14.6 5.7 Z" />
-        <ellipse cx="12" cy="13.2" rx="7.5" ry="6.6" />
-      </g>
-
-      {filled && (
-        <>
-          {/* Drawn in the card's own brown, so they read as cut-outs. */}
-          <circle cx="9.1" cy="12.4" r="0.95" fill="#2C1F0E" />
-          <circle cx="14.9" cy="12.4" r="0.95" fill="#2C1F0E" />
-          {/* Heart nose keeps the terracotta accent the flower used to carry. */}
-          <path
-            d="M12 16.4c-1.5-1-2.3-1.7-2.3-2.5a1.15 1.15 0 0 1 2.3-.45 1.15 1.15 0 0 1 2.3.45c0 .8-.8 1.5-2.3 2.5Z"
-            fill="#C4522A"
-          />
-        </>
-      )}
-    </svg>
-  );
-}
+/** Un poco chueco, como un sello de verdad; fijo por posición para no brincar. */
+const TILT = [-8, 5, -3, 7, -6, 4, -5, 8, -4, 6];
 
 /**
  * The stamp card, client-side so it can notice a stamp that landed since she
@@ -73,29 +67,70 @@ function CatMark({ filled }: { filled: boolean }) {
 export default function StampCard({ stamps, required, track = true }: Props) {
   const router = useRouter();
   const filled = Math.min(stamps, required);
+  // `pending`: sellos nuevos que todavía no "caen" (se dibujan vacíos).
+  // `earned`: los que acaban de caer, para animarlos y dar el aviso.
+  const [pending, setPending] = useState(0);
   const [earned, setEarned] = useState(0);
+  const [fromZero, setFromZero] = useState(false);
+  // Hasta 6 en una fila; más, en dos filas parejas.
+  const columns = required <= 6 ? required : Math.ceil(required / 2);
 
-  useEffect(() => {
+  // Layout effect: decide antes de pintar que los sellos nuevos empiecen
+  // vacíos, para que no se vean un instante ya puestos y luego desaparezcan.
+  useLayoutEffect(() => {
     if (!track) return;
 
-    const raw = window.localStorage.getItem(SEEN_KEY);
-    window.localStorage.setItem(SEEN_KEY, String(filled));
+    const raw = readSeen();
+    writeSeen(filled);
 
     // No previous reading means this phone has never shown the card, so there is
     // nothing to have "just arrived". Note the null check has to come first:
     // Number(null) is 0, which would read as a balance of zero and celebrate
-    // every stamp she already had.
+    // every stamp she already had. (Al activar, EnrollForm deja un 0 a
+    // propósito: sus sellos caen la primera vez que ve su tarjeta.)
     if (raw === null) return;
 
     // A redemption sends the count down. Celebrate only a genuine increase.
     const previous = Number(raw);
     if (!Number.isFinite(previous) || filled <= previous) return;
 
-    // Deferred to the next frame on purpose: an entrance animation started
-    // during hydration is usually swallowed before it can paint.
-    const frame = requestAnimationFrame(() => setEarned(filled - previous));
-    return () => cancelAnimationFrame(frame);
+    const count = filled - previous;
+    setPending(count);
+    setFromZero(previous === 0);
+    const timer = setTimeout(() => {
+      setPending(0);
+      setEarned(count);
+    }, LAND_DELAY_MS);
+    // Un golpecito cuando cada sello toca la tarjeta (Android; iPhone lo ignora).
+    const buzz = setTimeout(() => {
+      try {
+        navigator.vibrate?.(Array.from({ length: count * 2 - 1 }, (_, k) => (k % 2 === 0 ? 24 : STAGGER_MS - 24)));
+      } catch {
+        // Sin vibración no pasa nada.
+      }
+    }, LAND_DELAY_MS + TOUCHDOWN_MS);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(buzz);
+    };
   }, [filled, track]);
+
+  // Abrir la tarjeta (el toque del NFC) cobra el sello de la cita de hoy, si
+  // le toca. Una vez por apertura; el servidor decide y nunca da dos por cita.
+  // Si llega uno, se vuelve a pintar la tarjeta y el sello cae.
+  const tapped = useRef(false);
+  useEffect(() => {
+    if (!track || tapped.current) return;
+    tapped.current = true;
+    fetch("/api/rewards/tap", { method: "POST" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.granted) router.refresh();
+      })
+      .catch(() => {
+        // Sin conexión: el sello no se pierde, se suma al registrar el pago.
+      });
+  }, [track, router]);
 
   // Watch for a stamp arriving while the card is open. Rather than patching the
   // count in place — which would leave the progress bar, the "faltan N visitas"
@@ -150,45 +185,82 @@ export default function StampCard({ stamps, required, track = true }: Props) {
   }, [stamps, track, router]);
 
   return (
-    <>
+    <div className="relative">
+      {/* Flota sobre la línea de "faltan N visitas" y se va sola: no empuja la tarjeta. */}
       {earned > 0 && (
-        <p
-          role="status"
-          className="stamp-cheer text-center text-[11px] font-black uppercase tracking-widest text-salon-terracotta mb-3"
+        <div
+          className="stamp-toast absolute inset-x-0 top-full z-10 mt-3 flex justify-center bg-white py-1"
+          style={{ animationDelay: `350ms, ${3200 + (earned - 1) * STAGGER_MS}ms` }}
         >
-          {earned === 1 ? "¡Se sumó tu sello!" : `¡Se sumaron ${earned} sellos!`}
-        </p>
+          <p
+            role="status"
+            className="whitespace-nowrap rounded-full bg-salon-terracotta px-4 py-1.5 text-[11px] font-black uppercase tracking-widest text-white shadow-md"
+          >
+            {earned === 1
+              ? "¡Se sumó tu sello!"
+              : fromZero
+                ? `¡Aquí están tus ${earned} sellos!`
+                : `¡Se sumaron ${earned} sellos!`}
+          </p>
+        </div>
       )}
 
       <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${required}, minmax(0, 1fr))` }}
+        className="grid gap-2.5"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         role="img"
         aria-label={`${filled} de ${required} sellos`}
       >
         {Array.from({ length: required }, (_, i) => {
-          const isFilled = i < filled;
-          const isNext = i === filled;
-          // Only the stamps that arrived since her last look pop in.
-          const isNew = earned > 0 && i >= filled - earned && isFilled;
+          // Mientras caen, los nuevos se ven vacíos y el primero como "siguiente".
+          const shown = filled - pending;
+          const isFilled = i < shown;
+          const isNext = i === shown;
+          const isReward = i === required - 1;
+          // Only the stamps that arrived since her last look drop in.
+          const order = i - (filled - earned);
+          const isNew = earned > 0 && order >= 0 && isFilled;
+          const tilt = `${TILT[i % TILT.length]}deg`;
+          const delay = isNew ? `${order * STAGGER_MS}ms` : undefined;
 
           return (
-            <div
-              key={i}
-              aria-hidden="true"
-              className={`aspect-square rounded-full grid place-items-center border-2 ${
-                isFilled
-                  ? "bg-salon-brown border-salon-brown text-salon-blush"
-                  : isNext
-                    ? "border-dashed border-salon-terracotta text-salon-terracotta/60"
-                    : "border-dashed border-salon-olive/35 text-salon-olive/30"
-              } ${isNew ? "stamp-pop" : ""}`}
-            >
-              <CatMark filled={isFilled} />
+            <div key={i} aria-hidden="true" className="relative aspect-square">
+              {isFilled ? (
+                <>
+                  {isNew && (
+                    <span
+                      className="stamp-ripple absolute inset-0 rounded-full border-2 border-salon-pink"
+                      style={{ animationDelay: delay }}
+                    />
+                  )}
+                  <div
+                    className={`absolute inset-0 rounded-full grid place-items-center bg-salon-blush ring-2 ring-salon-pink/60 ring-offset-2 ring-offset-white shadow-[inset_0_-3px_0_rgba(196,120,154,0.25)] ${
+                      isNew ? "stamp-drop" : ""
+                    }`}
+                    style={{ "--tilt": tilt, transform: `rotate(${tilt})`, animationDelay: delay } as React.CSSProperties}
+                  >
+                    <CatFace mood={filled === required ? "happy" : "curious"} className="w-[78%] h-[78%] translate-y-[3%]" />
+                  </div>
+                </>
+              ) : (
+                <div
+                  className={`absolute inset-0 rounded-full grid place-items-center border-2 border-dashed ${
+                    isNext
+                      ? "border-salon-terracotta/70 bg-salon-terracotta/[0.04] text-salon-terracotta/55"
+                      : "border-salon-brown/15 text-salon-brown/15"
+                  }`}
+                >
+                  {isReward ? (
+                    <GiftMark className={`w-[48%] h-[48%] ${isNext ? "" : "text-salon-pink/70"}`} />
+                  ) : (
+                    <PawPrint className="w-[44%] h-[44%]" />
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

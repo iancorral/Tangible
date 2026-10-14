@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import MuralDecorations from "@/components/layout/MuralDecorations";
-import { useAdminHref } from "@/components/admin/StudioContext";
+import { useAdminHref, useStudio } from "@/components/admin/StudioContext";
+import ActivateCardDialog from "@/components/admin/ActivateCardDialog";
 import PaymentBadge from "@/components/admin/PaymentBadge";
 import FreeTag from "@/components/admin/FreeTag";
 import { SensitiveAmount } from "@/components/privacy";
@@ -31,7 +32,14 @@ type Appointment = {
   createdByAdmin?: boolean;
 };
 
-type Customer = { id: string; name: string; phone: string; notes: string | null };
+type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  notes: string | null;
+  /** Cuándo abrió su tarjeta de sellos en el celular (null: aún no). */
+  joinedAt?: string | null;
+};
 
 type Stats = {
   visits: number;
@@ -45,7 +53,9 @@ type Conflict = { id: string; name: string; visits: number };
 
 export default function CustomerDetailPage() {
   const adminPath = useAdminHref();
+  const { features } = useStudio();
   const { id } = useParams<{ id: string }>();
+  const [activating, setActivating] = useState(false);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -264,6 +274,48 @@ export default function CustomerDetailPage() {
             )}
           </div>
         </div>
+
+        {/* TARJETA DE SELLOS */}
+        {features.rewards && (
+          <div className="flex items-center gap-3 bg-white rounded-2xl border-2 border-salon-pink/40 shadow-sm px-5 py-4 mb-6">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black text-salon-brown uppercase tracking-widest">
+                Tarjeta de sellos
+              </p>
+              <p
+                className={`text-xs font-bold mt-0.5 ${
+                  customer.joinedAt ? "text-salon-olive" : "text-salon-gray"
+                }`}
+              >
+                {customer.joinedAt ? "Activa en su celular" : "Aún no la activa"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActivating(true)}
+              className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
+                customer.joinedAt
+                  ? "border-2 border-salon-brown/20 text-salon-brown hover:bg-salon-brown/5"
+                  : "bg-salon-brown text-salon-blush hover:bg-salon-brown/90"
+              }`}
+            >
+              {customer.joinedAt ? "Otro teléfono" : "Activar"}
+            </button>
+          </div>
+        )}
+
+        {activating && (
+          <ActivateCardDialog
+            customerId={customer.id}
+            customerName={customer.name}
+            onClose={() => setActivating(false)}
+            onActivated={() =>
+              setCustomer((current) =>
+                current ? { ...current, joinedAt: current.joinedAt ?? new Date().toISOString() } : current
+              )
+            }
+          />
+        )}
 
         {/* DATOS EDITABLES */}
         <form

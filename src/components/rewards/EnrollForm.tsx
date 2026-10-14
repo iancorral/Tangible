@@ -1,18 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SEEN_KEY } from "./StampCard";
 
 const CODE_LENGTH = 6;
+
+/** Lo que el QR del panel trae en ?code=, ya limpio. */
+function cleanCode(raw: string | undefined): string {
+  return (raw ?? "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, CODE_LENGTH);
+}
 
 /**
  * Six separate boxes rather than one masked field: it is what the owner is
  * reading out loud, one character at a time, and it makes a typo obvious.
+ *
+ * Con `initialCode` (llegó escaneando el QR del panel) se llena y se envía
+ * sola: la clienta no escribe nada.
  */
-export default function EnrollForm() {
+export default function EnrollForm({ initialCode }: { initialCode?: string }) {
   const router = useRouter();
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
-  const [chars, setChars] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const fromQr = cleanCode(initialCode);
+  const [chars, setChars] = useState<string[]>(() =>
+    fromQr.length === CODE_LENGTH ? fromQr.split("") : Array(CODE_LENGTH).fill("")
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +66,7 @@ export default function EnrollForm() {
     }
   };
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (code.length !== CODE_LENGTH) return;
-
+  const activate = async (value: string) => {
     setSubmitting(true);
     setError(null);
 
@@ -65,7 +74,7 @@ export default function EnrollForm() {
       const res = await fetch("/api/rewards/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: value }),
       });
 
       if (!res.ok) {
@@ -76,7 +85,17 @@ export default function EnrollForm() {
         return;
       }
 
+      // Sus sellos (por ejemplo el de la visita de hoy) caen la primera vez que
+      // ve su tarjeta, en vez de aparecer ya puestos.
+      try {
+        window.localStorage.setItem(SEEN_KEY, "0");
+      } catch {
+        // Sin almacenamiento: la tarjeta se ve igual, solo sin animación.
+      }
+
       // The pass is now set; the page reads the card server-side on refresh.
+      // replace() además quita el código del enlace del QR (y del historial).
+      router.replace("/rewards");
       router.refresh();
     } catch {
       setError("Sin conexión. Revisa tus datos e intenta de nuevo.");
@@ -84,6 +103,21 @@ export default function EnrollForm() {
       setSubmitting(false);
     }
   };
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (code.length === CODE_LENGTH) activate(code);
+  };
+
+  // Llegó desde el QR: activar en cuanto se abre la página, una sola vez.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (autoSent.current || fromQr.length !== CODE_LENGTH) return;
+    autoSent.current = true;
+    activate(fromQr);
+    // activate es estable en la práctica; solo debe correr al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <form onSubmit={submit}>
@@ -126,7 +160,7 @@ export default function EnrollForm() {
           disabled={code.length !== CODE_LENGTH || submitting}
           className="w-full py-4 bg-salon-brown text-salon-blush font-black text-[11px] uppercase tracking-widest rounded-2xl transition-all disabled:bg-white disabled:text-salon-gray/60 disabled:border-2 disabled:border-salon-gray/20"
         >
-          {submitting ? "Activando..." : "Activar mi tarjeta"}
+          {submitting ? "Activando tu tarjeta…" : "Activar mi tarjeta"}
         </button>
       </fieldset>
     </form>
