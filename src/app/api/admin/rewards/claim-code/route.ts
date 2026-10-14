@@ -6,6 +6,8 @@ import { z } from "zod";
 
 const schema = z.object({
   customerId: z.string().regex(/^[a-f\d]{24}$/i, "ID inválido"),
+  // "link": enlace para mandarle por WhatsApp (dura más). Por defecto, QR.
+  delivery: z.enum(["qr", "link"]).optional(),
 });
 
 /**
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
 
     const customer = await prisma.customer.findUnique({
       where: { id: validation.data.customerId, studioId },
-      select: { id: true },
+      select: { id: true, phone: true },
     });
     if (!customer) {
       return NextResponse.json({ error: "Clienta no encontrada" }, { status: 404 });
@@ -77,13 +79,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const { code, expiresAt } = await issueClaimCode(
-      studioId,
-      customer.id,
-      ctx.email
-    );
+    const delivery = validation.data.delivery ?? "qr";
+    const { code, expiresAt } = await issueClaimCode(studioId, customer.id, ctx.email, delivery);
 
-    return NextResponse.json({ code, expiresAt });
+    // El teléfono solo hace falta para abrir su chat de WhatsApp.
+    return NextResponse.json(delivery === "link" ? { code, expiresAt, phone: customer.phone } : { code, expiresAt });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

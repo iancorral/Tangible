@@ -5,7 +5,7 @@ const prismaMock = vi.hoisted(() => ({
   studio: { findUnique: vi.fn() },
   user: { findUnique: vi.fn() },
   customer: { findUnique: vi.fn() },
-  claimCode: { findFirst: vi.fn() },
+  claimCode: { findFirst: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
 }));
 const sessionMock = vi.hoisted(() => vi.fn());
 
@@ -13,7 +13,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: sessionMock }));
 
-import { GET } from "./route";
+import { GET, POST } from "./route";
 
 const STUDIO_ID = "6a00000000000000000000aa";
 const CUSTOMER = "6a0000000000000000000c01";
@@ -77,5 +77,53 @@ describe("GET /api/admin/rewards/claim-code?customerId=", () => {
     expect((await status()).status).toBe(401);
     prismaMock.studio.findUnique.mockResolvedValue(studio(false));
     expect((await status()).status).toBe(403);
+  });
+});
+
+describe("POST /api/admin/rewards/claim-code", () => {
+  const issue = async (body: Record<string, unknown>) => {
+    const res = await POST(
+      new Request("http://test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    );
+    return { status: res.status, body: await res.json() };
+  };
+  const minutesLeft = (iso: string) => Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+
+  beforeEach(() => {
+    process.env.REWARDS_PASS_SECRET = "test-secret";
+    prismaMock.customer.findUnique.mockResolvedValue({ id: CUSTOMER, phone: "6141749818" });
+    prismaMock.claimCode.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.claimCode.create.mockResolvedValue({});
+  });
+
+  it("QR: dura 30 minutos, no manda el teléfono y no anula un enlace ya enviado", async () => {
+    const { status, body } = await issue({ customerId: CUSTOMER });
+    expect(status).toBe(200);
+    expect(body.code).toMatch(/^[0-9A-Z]{6}$/);
+    expect(body.phone).toBeUndefined();
+    expect(minutesLeft(body.expiresAt)).toBe(30);
+    // Solo anula códigos cortos (otros QR), no el enlace de 24 h.
+    const { where } = prismaMock.claimCode.updateMany.mock.calls[0][0];
+    expect(where).toMatchObject({ studioId: STUDIO_ID, customerId: CUSTOMER, consumedAt: null });
+    expect(where.expiresAt.lte.getTime()).toBeLessThan(Date.now() + 60 * 60 * 1000);
+  });
+
+  it("enlace por WhatsApp: dura 24 h, trae su teléfono y reemplaza cualquier código anterior", async () => {
+    const { body } = await issue({ customerId: CUSTOMER, delivery: "link" });
+    expect(minutesLeft(body.expiresAt)).toBe(24 * 60);
+    expect(body.phone).toBe("6141749818");
+    const { where } = prismaMock.claimCode.updateMany.mock.calls[0][0];
+    expect(where).toEqual({ studioId: STUDIO_ID, customerId: CUSTOMER, consumedAt: null });
+  });
+
+  it("solo guarda el hash del código, nunca el código", async () => {
+    const { body } = await issue({ customerId: CUSTOMER, delivery: "link" });
+    const { data } = prismaMock.claimCode.create.mock.calls[0][0];
+    expect(data.studioId).toBe(STUDIO_ID);
+    expect(JSON.stringify(data)).not.toContain(body.code);
+  });
+
+  it("modo desconocido: 400", async () => {
+    expect((await issue({ customerId: CUSTOMER, delivery: "sms" })).status).toBe(400);
   });
 });

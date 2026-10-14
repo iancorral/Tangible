@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "react-qr-code";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { useStudio } from "@/components/admin/StudioContext";
+import { buildCardLinkMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 
 /** Página pública de la tarjeta (www), no el panel. */
 const PUBLIC_SITE = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
@@ -18,6 +20,20 @@ interface Props {
 }
 
 type Issued = { code: string; expiresAt: string; issuedAt: number };
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z" />
+    </svg>
+  );
+}
+
+/** Enlace a su tarjeta en el sitio público (www), con el código ya puesto. */
+function linkFor(code: string): string {
+  const site = PUBLIC_SITE || (typeof window !== "undefined" ? window.location.origin : "");
+  return `${site}/rewards?code=${code}`;
+}
 
 function formatCode(code: string) {
   return `${code.slice(0, 3)} ${code.slice(3)}`;
@@ -36,7 +52,12 @@ function formatCode(code: string) {
  */
 export default function ActivateCardDialog({ customerId, customerName, onClose, onActivated }: Props) {
   useBodyScrollLock();
+  const { shortName } = useStudio();
   const [issued, setIssued] = useState<Issued | null>(null);
+  // "link": se le mandó su enlace por WhatsApp; el QR ya no aplica.
+  const [mode, setMode] = useState<"qr" | "link">("qr");
+  const [copied, setCopied] = useState(false);
+  const [chatUrl, setChatUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activated, setActivated] = useState(false);
@@ -64,12 +85,65 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
       const next = { code: data.code, expiresAt: data.expiresAt, issuedAt: Date.now() };
       issuedRef.current = next;
       setIssued(next);
+      setMode("qr");
     } catch {
       setError("No hay conexión. Revisa tu internet y vuelve a intentarlo.");
     } finally {
       setBusy(false);
     }
   }, [customerId]);
+
+  /**
+   * Para cuando no está en el estudio: un enlace personal (24 h, un solo uso)
+   * directo a su chat. Al abrirlo se activa su tarjeta y le caen sus sellos.
+   */
+  const sendLink = async () => {
+    // La ventana se abre ya, dentro del toque: si se abre después de esperar
+    // al servidor, el navegador la bloquea como ventana emergente.
+    const popup = window.open("", "_blank");
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/rewards/claim-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId, delivery: "link" }),
+      });
+      const data: { code?: string; expiresAt?: string; phone?: string; error?: string } = await res
+        .json()
+        .catch(() => ({}));
+      if (!res.ok || !data.code || !data.expiresAt) {
+        popup?.close();
+        setError(data.error ?? "No se pudo generar el enlace. Intenta de nuevo.");
+        return;
+      }
+      const next = { code: data.code, expiresAt: data.expiresAt, issuedAt: Date.now() };
+      issuedRef.current = next;
+      setIssued(next);
+      setMode("link");
+      const message = buildCardLinkMessage({ clientName: customerName, studioName: shortName, url: linkFor(next.code) });
+      const chat = data.phone ? buildWhatsAppUrl(data.phone, message) : `https://wa.me/?text=${encodeURIComponent(message)}`;
+      setChatUrl(chat);
+      if (popup) popup.location.href = chat;
+      else window.location.href = chat;
+    } catch {
+      popup?.close();
+      setError("No hay conexión. Revisa tu internet y vuelve a intentarlo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!issued) return;
+    try {
+      await navigator.clipboard.writeText(linkFor(issued.code));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("No se pudo copiar. Mejor usa el botón de WhatsApp.");
+    }
+  };
 
   // Un código nuevo al abrir.
   useEffect(() => {
@@ -124,8 +198,7 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
   const expired = issued !== null && remainingMs <= 0;
   const mm = Math.max(0, Math.floor(remainingMs / 60000));
   const ss = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
-  const site = PUBLIC_SITE || (typeof window !== "undefined" ? window.location.origin : "");
-  const qrValue = issued ? `${site}/rewards?code=${issued.code}` : "";
+  const qrValue = issued ? linkFor(issued.code) : "";
   const firstName = customerName.trim().split(/\s+/)[0];
 
   // Portal: se abre también desde dentro del cobro, que es otro modal.
@@ -159,35 +232,79 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
           <>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-salon-terracotta">Tarjeta de sellos</p>
             <h2 className="mt-1 pr-10 text-lg font-black leading-snug text-salon-brown">Activar la tarjeta de {firstName}</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-salon-gray">
-              Que lo escanee con la cámara de su celular.
-            </p>
-
-            <div className="relative mx-auto mt-5 aspect-square w-full max-w-[240px] rounded-3xl border-2 border-salon-brown/10 bg-white p-4">
-              {issued && !expired ? (
-                <QRCode value={qrValue} size={256} fgColor="#2C1F0E" bgColor="#FFFFFF" style={{ width: "100%", height: "100%" }} />
-              ) : (
-                <div className="flex h-full items-center justify-center text-center text-xs font-bold text-salon-gray">
-                  {busy ? "Generando…" : expired ? "Este código venció" : error ? "" : "Generando…"}
+            {mode === "link" && issued && !expired ? (
+              <div className="mt-5 rounded-3xl bg-salon-blush/30 px-5 py-6 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white">
+                  <WhatsAppIcon className="h-6 w-6" />
                 </div>
-              )}
-            </div>
-
-            {issued && !expired && (
-              <div className="mt-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-salon-gray">o en el sticker, este código</p>
-                <p className="mt-1 text-3xl font-black tracking-[0.18em] text-salon-brown tabular-nums">{formatCode(issued.code)}</p>
-                <p className="mt-1 text-[11px] text-salon-gray tabular-nums">
-                  Un solo uso · vence en {mm}:{String(ss).padStart(2, "0")}
+                <p className="text-sm font-black text-salon-brown">Enlace listo para {firstName}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-salon-gray">
+                  Mándale el mensaje en WhatsApp. Cuando lo abra, su tarjeta se activa y le caen sus sellos.
                 </p>
-                <p className="mt-3 flex items-center justify-center gap-2 text-[11px] font-bold text-salon-olive">
+                <p className="mt-2 text-[11px] text-salon-gray">
+                  Un solo uso · vale hasta el{" "}
+                  {new Date(issued.expiresAt).toLocaleString("es-MX", { weekday: "long", hour: "numeric", minute: "2-digit" })}
+                </p>
+                <div className="mt-3 flex items-center justify-center gap-4">
+                  {chatUrl && (
+                    <a
+                      href={chatUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-black uppercase tracking-widest text-salon-terracotta hover:text-salon-brown"
+                    >
+                      Abrir WhatsApp otra vez
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={copyLink}
+                    className="text-[11px] font-black uppercase tracking-widest text-salon-terracotta hover:text-salon-brown"
+                  >
+                    {copied ? "¡Copiado!" : "Copiar enlace"}
+                  </button>
+                </div>
+                <p className="mt-4 flex items-center justify-center gap-2 text-[11px] font-bold text-salon-olive">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-salon-olive/60" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-salon-olive" />
                   </span>
-                  Esperando que lo escanee…
+                  Te aviso aquí cuando lo abra
                 </p>
               </div>
+            ) : (
+              <>
+              <p className="mt-1 text-[13px] leading-relaxed text-salon-gray">
+                Que lo escanee con la cámara de su celular.
+              </p>
+
+              <div className="relative mx-auto mt-5 aspect-square w-full max-w-[240px] rounded-3xl border-2 border-salon-brown/10 bg-white p-4">
+                {issued && !expired ? (
+                  <QRCode value={qrValue} size={256} fgColor="#2C1F0E" bgColor="#FFFFFF" style={{ width: "100%", height: "100%" }} />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-center text-xs font-bold text-salon-gray">
+                    {busy ? "Generando…" : expired ? "Este código venció" : error ? "" : "Generando…"}
+                  </div>
+                )}
+              </div>
+
+              {issued && !expired && (
+                <div className="mt-4 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-salon-gray">o en el sticker, este código</p>
+                  <p className="mt-1 text-3xl font-black tracking-[0.18em] text-salon-brown tabular-nums">{formatCode(issued.code)}</p>
+                  <p className="mt-1 text-[11px] text-salon-gray tabular-nums">
+                    Un solo uso · vence en {mm}:{String(ss).padStart(2, "0")}
+                  </p>
+                  <p className="mt-3 flex items-center justify-center gap-2 text-[11px] font-bold text-salon-olive">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-salon-olive/60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-salon-olive" />
+                    </span>
+                    Esperando que lo escanee…
+                  </p>
+                </div>
+              )}
+              </>
             )}
 
             {error && (
@@ -196,13 +313,25 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
               </p>
             )}
 
+            {mode === "qr" && (
+              <button
+                type="button"
+                onClick={sendLink}
+                disabled={busy}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-[11px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-[#1fb757] disabled:opacity-50"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                No está aquí: mandar por WhatsApp
+              </button>
+            )}
+
             <button
               type="button"
               onClick={issue}
               disabled={busy}
-              className="mt-5 w-full rounded-2xl border-2 border-salon-brown/15 py-3 text-[11px] font-black uppercase tracking-widest text-salon-brown transition-colors hover:bg-salon-brown/5 disabled:opacity-50"
+              className="mt-2.5 w-full rounded-2xl border-2 border-salon-brown/15 py-3 text-[11px] font-black uppercase tracking-widest text-salon-brown transition-colors hover:bg-salon-brown/5 disabled:opacity-50"
             >
-              {expired ? "Generar código nuevo" : "Generar otro código"}
+              {mode === "link" ? "Mejor mostrarle el QR" : expired ? "Generar código nuevo" : "Generar otro código"}
             </button>
           </>
         )}
