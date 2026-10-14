@@ -36,6 +36,7 @@ beforeEach(() => {
   prismaMock.user.findUnique.mockResolvedValue({ studioId: STUDIO_ID, email: "tania@test", name: "Tania", mustChangePassword: false, passwordChangedAt: null });
   prismaMock.customer.findMany.mockResolvedValue(customers);
   prismaMock.appointment.groupBy.mockResolvedValue([]);
+  prismaMock.appointment.findMany.mockResolvedValue([]);
 });
 
 describe("GET /api/admin/clients?q=", () => {
@@ -52,5 +53,44 @@ describe("GET /api/admin/clients?q=", () => {
   it("busca sin acentos en todas las clientas", async () => {
     expect(await search("sofia")).toEqual(["Sofía Chávez"]);
     expect((await search("pena")).sort()).toEqual(["Dania Peña", "Lucero Peña"]);
+  });
+});
+
+describe("clientas de paso (sin teléfono)", () => {
+  const walkIns = [
+    { clientName: "Doña Chuy", date: new Date("2026-09-01") },
+    { clientName: "doña chuy ", date: new Date("2026-10-05") },
+    { clientName: "Dania Peña", date: new Date("2026-07-01") },
+  ];
+
+  const searchRows = async (q: string) => {
+    const res = await GET(new Request(`http://test/api/admin/clients?q=${encodeURIComponent(q)}`));
+    return (await res.json()).clients as { name: string; phone: string | null; visits: number }[];
+  };
+
+  beforeEach(() => {
+    prismaMock.appointment.findMany.mockResolvedValue(walkIns);
+  });
+
+  it("aparecen por nombre, sin teléfono y con sus visitas juntas", async () => {
+    expect(await searchRows("chuy")).toEqual([
+      expect.objectContaining({ name: "doña chuy", phone: null, visits: 2 }),
+    ]);
+    expect((await searchRows("dona")).map((c) => c.name)).toEqual(["doña chuy"]);
+  });
+
+  it("solo busca citas del estudio, sin ficha, sin teléfono y no canceladas", async () => {
+    await searchRows("chuy");
+    const { where } = prismaMock.appointment.findMany.mock.calls[0][0];
+    expect(where.studioId).toBe(STUDIO_ID);
+    expect(where.status).toEqual({ not: "CANCELLED" });
+    expect(JSON.stringify(where.AND)).toContain("customerId");
+    expect(JSON.stringify(where.AND)).toContain("clientPhone");
+  });
+
+  it("si ya tiene ficha con ese nombre, se sugiere la ficha y no se repite", async () => {
+    const rows = await searchRows("dania");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ name: "Dania Peña", phone: "6142708576" });
   });
 });
