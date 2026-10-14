@@ -11,7 +11,7 @@ const prismaMock = vi.hoisted(() => ({
   appointment: { update: vi.fn(), findUnique: vi.fn() },
   rewardProgram: { findUnique: vi.fn(), upsert: vi.fn() },
   redemption: { findUnique: vi.fn() },
-  stamp: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+  stamp: { create: vi.fn(), findMany: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
 }));
 const sessionMock = vi.hoisted(() => vi.fn());
 
@@ -75,6 +75,7 @@ beforeEach(() => {
   prismaMock.stamp.create.mockResolvedValue({});
   prismaMock.stamp.findMany.mockResolvedValue([]);
   prismaMock.stamp.update.mockResolvedValue({});
+  prismaMock.stamp.deleteMany.mockResolvedValue({ count: 0 });
 });
 
 describe("PATCH /api/admin/appointments/[id]/payment — sello automático", () => {
@@ -164,5 +165,22 @@ describe("PATCH /api/admin/appointments/[id]/payment — sello automático", () 
     const { body } = await pay();
     expect(body.stampGranted).toBe(true);
     expect(prismaMock.stamp.update).not.toHaveBeenCalled();
+  });
+
+  it("si la cita queda gratis, se le quita el sello que ya tenía (NFC)", async () => {
+    prismaMock.appointment.update.mockResolvedValue(appointment({ finalPrice: 0, paymentStatus: "PAID" }));
+    const { body } = await pay({ finalPrice: 0, paymentStatus: "PAID" });
+    expect(body.stampGranted).toBe(false);
+    expect(prismaMock.stamp.deleteMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ studioId: STUDIO_ID, dedupeKey: `appt:${APPT}` }),
+    });
+    expect(prismaMock.stamp.create).not.toHaveBeenCalled();
+  });
+
+  it("cambiar solo el método o el estado de pago no toca los sellos de más", async () => {
+    prismaMock.appointment.update.mockResolvedValue(appointment({ paymentStatus: "PENDING", paymentMethod: "TRANSFER" }));
+    await pay({ paymentStatus: "PENDING", paymentMethod: "TRANSFER" });
+    expect(prismaMock.stamp.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.stamp.create).not.toHaveBeenCalled();
   });
 });

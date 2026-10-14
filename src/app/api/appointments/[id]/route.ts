@@ -2,6 +2,7 @@ import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireStudio } from "@/lib/tenant";
+import { revokeAppointmentStamp } from "@/lib/rewards.server";
 import { hasConfirmedCollision } from "@/lib/availability";
 import { z } from "zod";
 
@@ -59,6 +60,11 @@ export async function PATCH(
       where: { id, studioId },
       data: { status },
     });
+
+    // Una cita cancelada no da sello: si ya lo había cobrado, se le quita.
+    if (status === "CANCELLED") {
+      await revokeAppointmentStamp(studioId, id).catch((error) => console.error("Quitar sello:", error));
+    }
 
     return NextResponse.json(updatedAppointment);
   } catch (error) {

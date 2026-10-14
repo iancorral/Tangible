@@ -149,7 +149,7 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
             </div>
             <p className="text-lg font-black text-salon-brown">¡Tarjeta activada!</p>
             <p className="mt-1 text-sm text-salon-gray">
-              {firstName} ya puede ver sus sellos en su celular. Cada vez que registres el pago de una cita, se le suma solo.
+              {firstName} ya puede ver sus sellos en su celular. En cada cita, al acercar su celular al sticker, le cae su sello.
             </p>
             <button type="button" onClick={onClose} className="mt-6 w-full rounded-2xl bg-salon-brown py-3.5 text-[11px] font-black uppercase tracking-widest text-white">
               Listo

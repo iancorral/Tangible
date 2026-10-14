@@ -190,7 +190,7 @@ export default function AppointmentRewards({ appointmentId, onFinalPriceChange }
 
               {!blocker && !stampGranted && !state.ready && (
                 <p className="text-[10px] text-salon-gray font-medium mt-2 leading-relaxed text-center">
-                  Al guardar la cita como pagada, el sello se le suma solo.
+                  Hoy, al acercar su celular al sticker, le cae el sello. Si se le olvida, se suma al guardar la cita como pagada.
                 </p>
               )}
 

@@ -574,10 +574,11 @@ export default function RewardsPage() {
         )}
 
         <p className="text-[10px] text-salon-gray mt-6 leading-relaxed">
-          Cada cita pagada suma su sello sola al registrar el cobro (las gratis y las
-          canceladas no). Aquí sólo se ajustan a mano: para premiar a una clienta de
-          siempre o para corregir un error. Acercar el celular al sticker nunca da
-          sellos: sólo abre la tarjeta.
+          Cada cita da un sello: el día de la cita, cuando la clienta acerca su celular
+          al sticker (o, si se le olvida, al guardar la cita como pagada). Pasarlo otra
+          vez no suma nada hasta su siguiente cita. Las gratis y las canceladas no dan
+          sello. Aquí sólo se ajustan a mano: para premiar a una clienta de siempre o
+          para corregir un error.
         </p>
 
         {activating && (

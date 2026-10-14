@@ -200,7 +200,7 @@ export default async function RewardsPage({ searchParams }: { searchParams: Prom
       </Link>
 
       <p className="text-[10px] text-salon-gray/80 text-center leading-relaxed mt-4">
-        Tu sello se suma solito cuando pagas cada cita.
+        El día de tu cita, acerca tu celular al sticker del estudio y tu sello cae solito.
       </p>
     </Shell>
   );

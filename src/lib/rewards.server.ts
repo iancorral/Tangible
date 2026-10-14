@@ -59,7 +59,8 @@ async function findSameDayManualStamp(studioId: string, customerId: string, day:
 export async function grantAppointmentStampIfEligible(
   studioId: string,
   appointmentId: string,
-  createdBy: string
+  createdBy: string,
+  note = "Automático al registrar el pago"
 ): Promise<boolean> {
   const program = await getRewardProgram(studioId);
   if (!program.isActive) return false;
@@ -95,7 +96,7 @@ export async function grantAppointmentStampIfEligible(
         source: "APPOINTMENT",
         appointmentId,
         redemptionId: null,
-        note: "Automático al registrar el pago",
+        note,
         createdBy,
       },
     });
@@ -105,6 +106,54 @@ export async function grantAppointmentStampIfEligible(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return false;
     throw error;
   }
+}
+
+/**
+ * Quita el sello de una cita que dejó de merecerlo (se canceló o quedó gratis).
+ * Si ya se gastó en una recompensa se deja: deshacer un canje es otra cosa.
+ */
+export async function revokeAppointmentStamp(studioId: string, appointmentId: string): Promise<boolean> {
+  const { count } = await prisma.stamp.deleteMany({
+    where: { studioId, dedupeKey: `appt:${appointmentId}`, ...UNSPENT_STAMP },
+  });
+  return count > 0;
+}
+
+/** Desde cuánto antes de su cita puede pasar el celular y llevarse el sello. */
+export const TAP_OPENS_BEFORE_MIN = 60;
+
+/**
+ * La clienta pasó su celular por el sticker: si hoy tiene una cita que aún no
+ * da su sello, se lo da. Así el sticker queda "armado" en cuanto Tania agenda
+ * la cita y se bloquea solo al usarlo: un sello por cita, nunca por toque.
+ *
+ * Solo el mismo día (Chihuahua) y desde una hora antes de la cita, para que
+ * abrir el enlace desde casa o días antes no adelante nada.
+ */
+export async function claimTapStamp(studioId: string, customerId: string, now = new Date()): Promise<boolean> {
+  const program = await getRewardProgram(studioId);
+  if (!program.isActive) return false;
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const today = chihuahuaDateKey(now);
+  const candidates = await prisma.appointment.findMany({
+    where: {
+      studioId,
+      customerId,
+      status: { not: "CANCELLED" },
+      date: { gte: new Date(now.getTime() - DAY_MS), lte: new Date(now.getTime() + TAP_OPENS_BEFORE_MIN * 60 * 1000) },
+    },
+    select: { id: true, date: true },
+    orderBy: { date: "asc" },
+  });
+
+  for (const appointment of candidates) {
+    if (chihuahuaDateKey(appointment.date) !== today) continue;
+    if (await grantAppointmentStampIfEligible(studioId, appointment.id, "clienta (NFC)", "Al pasar el celular")) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export async function updateRewardProgram(

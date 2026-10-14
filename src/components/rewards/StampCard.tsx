@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CatFace, GiftMark, PawPrint } from "./CatMascot";
 
@@ -114,6 +114,23 @@ export default function StampCard({ stamps, required, track = true }: Props) {
       clearTimeout(buzz);
     };
   }, [filled, track]);
+
+  // Abrir la tarjeta (el toque del NFC) cobra el sello de la cita de hoy, si
+  // le toca. Una vez por apertura; el servidor decide y nunca da dos por cita.
+  // Si llega uno, se vuelve a pintar la tarjeta y el sello cae.
+  const tapped = useRef(false);
+  useEffect(() => {
+    if (!track || tapped.current) return;
+    tapped.current = true;
+    fetch("/api/rewards/tap", { method: "POST" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.granted) router.refresh();
+      })
+      .catch(() => {
+        // Sin conexión: el sello no se pierde, se suma al registrar el pago.
+      });
+  }, [track, router]);
 
   // Watch for a stamp arriving while the card is open. Rather than patching the
   // count in place — which would leave the progress bar, the "faltan N visitas"

@@ -2,7 +2,8 @@ import { isNotFound } from "@/lib/prisma-errors";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasFeature, requireStudio } from "@/lib/tenant";
-import { grantAppointmentStampIfEligible } from "@/lib/rewards.server";
+import { grantAppointmentStampIfEligible, revokeAppointmentStamp } from "@/lib/rewards.server";
+import { getAppointmentAmount } from "@/lib/pricing";
 import { z } from "zod";
 
 const paymentSchema = z.object({
@@ -44,10 +45,13 @@ export async function PATCH(
       include: { services: true },
     });
 
-    // Cobrada = sello. Si falla, el pago ya quedó guardado y la dueña puede
-    // darlo a mano; no se le muestra un error por algo secundario.
+    // Cobrada = sello (si no lo cobró ya con el NFC). Si falla, el pago ya
+    // quedó guardado y la dueña puede darlo a mano; no se le muestra un error
+    // por algo secundario. Si quedó gratis, la cita deja de dar sello.
     let stampGranted = false;
-    if (updated.paymentStatus === "PAID" && hasFeature(ctx.studio, "rewards")) {
+    if (getAppointmentAmount(updated) <= 0) {
+      await revokeAppointmentStamp(studioId, id).catch((error) => console.error("Quitar sello:", error));
+    } else if (updated.paymentStatus === "PAID" && hasFeature(ctx.studio, "rewards")) {
       stampGranted = await grantAppointmentStampIfEligible(studioId, id, ctx.email).catch((error) => {
         console.error("Sello automático:", error);
         return false;
