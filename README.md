@@ -67,19 +67,13 @@ Tangible is a mobile-first SaaS-style booking platform that allows clients to br
    ```bash
    git clone https://github.com/iancorral/Nails_App
    cd Nails_App
-   npm install
+   npm ci
    ```
 
-2. Create a `.env` file in the root with the following variables:
+2. Copy `.env.example` to `.env` and fill in the values (each variable is documented there):
 
-   ```env
-   DATABASE_URL=
-   NEXTAUTH_SECRET=
-   NEXTAUTH_URL=http://localhost:3000
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   NEXT_PUBLIC_WHATSAPP_NUMBER=
-   # Optional — overrides the business name used in WhatsApp messages
-   NEXT_PUBLIC_BUSINESS_NAME=
+   ```bash
+   cp .env.example .env
    ```
 
 3. Generate the Prisma client and seed the service catalog:
