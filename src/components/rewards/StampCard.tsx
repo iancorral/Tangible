@@ -95,6 +95,7 @@ export default function StampCard({ stamps, required, track = true }: Props) {
     if (!Number.isFinite(previous) || filled <= previous) return;
 
     const count = filled - previous;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- los sellos vistos viven en localStorage, solo existe en el navegador
     setPending(count);
     setFromZero(previous === 0);
     const timer = setTimeout(() => {
