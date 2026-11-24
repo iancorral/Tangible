@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "react-qr-code";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -63,10 +63,9 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
   const [activated, setActivated] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const issuedRef = useRef<Issued | null>(null);
-  // En ref: quien abre el diálogo suele pasar una función nueva en cada render,
-  // y eso no debe reiniciar la consulta.
-  const onActivatedRef = useRef(onActivated);
-  onActivatedRef.current = onActivated;
+  // Evento de efecto: quien abre el diálogo suele pasar una función nueva en
+  // cada render, y eso no debe reiniciar la consulta.
+  const notifyActivated = useEffectEvent(() => onActivated?.());
 
   const issue = useCallback(async () => {
     setBusy(true);
@@ -147,6 +146,7 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
 
   // Un código nuevo al abrir.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- emite un código nuevo al abrir el diálogo
     issue();
   }, [issue]);
 
@@ -171,7 +171,7 @@ export default function ActivateCardDialog({ customerId, customerName, onClose, 
         if (current && data.lastActivatedAt && new Date(data.lastActivatedAt).getTime() >= current.issuedAt - 5000) {
           stopped = true;
           setActivated(true);
-          onActivatedRef.current?.();
+          notifyActivated();
         }
       } catch {
         // Sin conexión un momento: se vuelve a preguntar en el siguiente ciclo.

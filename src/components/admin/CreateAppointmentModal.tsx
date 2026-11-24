@@ -85,6 +85,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
 
   useEffect(() => {
     if (preselectedDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- toma la fecha y hora que manda el calendario
       setSelectedDate(format(preselectedDate, "yyyy-MM-dd"));
     }
     if (preselectedTime) {
@@ -132,6 +133,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
   useEffect(() => {
     const term = clientQuery.trim();
     if (term.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia los resultados al borrar la búsqueda
       setClientMatches([]);
       setSearchingClients(false);
       return;
@@ -167,6 +169,7 @@ export default function CreateAppointmentModal({ onClose, onCreated, preselected
 
   useEffect(() => {
     if (!preselectedTime || !selectedDate || totalDuration === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- revisa choques con la agenda de ese día
     setCheckingConflict(true);
     fetch(`/api/admin/day-overview?date=${selectedDate}`)
       .then((r) => r.json())

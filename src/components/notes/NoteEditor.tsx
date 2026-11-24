@@ -190,6 +190,7 @@ export default function NoteEditor({
   useEffect(() => {
     if (!focusItemId) return;
     itemRefs.current.get(focusItemId)?.focus();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mueve el foco una sola vez y se limpia
     setFocusItemId(null);
   }, [focusItemId, draft.items]);
 

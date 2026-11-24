@@ -52,6 +52,7 @@ function CalendarContent() {
   // Deep-link desde el panel: /admin/calendar?date=2026-06-15 y ?new=1
   // (botón "Nueva cita" del inicio).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- abre lo que pide la URL (enlace desde el inicio)
     if (searchParams.get("new") === "1") setShowCreateModal(true);
     const p = searchParams.get("date");
     if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) {
@@ -73,6 +74,7 @@ function CalendarContent() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial; enciende el indicador de carga antes de pedir
     fetchAppointments();
     fetch("/api/admin/schedule").then((r) => r.json()).then(setWeekSchedule);
   }, [fetchAppointments]);
@@ -90,6 +92,7 @@ function CalendarContent() {
   }, [monthFrom, monthTo]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recarga las notas al cambiar de mes
     fetchNotes();
   }, [fetchNotes]);
 
